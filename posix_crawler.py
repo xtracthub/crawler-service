@@ -15,6 +15,7 @@ import os
 import json
 import time
 import psycopg2
+import hashlib
 
 
 def _get_extension(filepath):
@@ -50,6 +51,20 @@ def dup_check(file_id):
     return file_id
 
 
+def md5_hasher(file_path, buff_size=65536):
+    md5hash = hashlib.md5()
+    with open(file_path, 'rb') as file:
+        while True:
+            chunk_data = file.read(buff_size)
+
+            if not chunk_data:
+                break
+            else:
+                md5hash.update(chunk_data)
+
+    return md5hash.hexdigest()
+
+
 def write_metadata_to_postgres(conn, cur, info_tuple):
     """ Take a tuple containing path and file-size, and update the table with this information.  This should also
         inform the user that they. """
@@ -83,8 +98,11 @@ def get_metadata(conn, cur, directory):
                 file_path = subdir + "/" + item
                 file_size = os.stat(file_path).st_size
                 extension = _get_extension(file_path)
+                file_hash = md5_hasher(file_path)
                 try:
-                    write_metadata_to_postgres(conn, cur, (file_path, file_size, extension))
+                    write_metadata_to_postgres(conn, cur, (file_path, file_size
+                                                           , extension,
+                                                           file_hash))
                 except psycopg2.Error as e:
                     print(e)
                     pass
@@ -92,7 +110,6 @@ def get_metadata(conn, cur, directory):
 
 
 def launch_crawler(conn, cur, repo_path):
-
     t0 = time.time()
     directory_input = repo_path
     get_metadata(conn, cur, directory_input)
@@ -101,4 +118,5 @@ def launch_crawler(conn, cur, repo_path):
     crawl_secs = t1-t0
 
     return {"crawl_secs": crawl_secs, "status": "DONE"}
-# launch_crawler(conn, cur, '/home/skluzacek/pub8')
+
+

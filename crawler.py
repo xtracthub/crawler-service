@@ -14,6 +14,7 @@ import posix_crawler
 
 
 def launch_crawler(conn, cur, crawler_type, path):
+
     if crawler_type == 'local' or 'posix':
         response = posix_crawler.launch_crawler(conn, cur, path)
 
