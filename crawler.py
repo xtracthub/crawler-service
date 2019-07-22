@@ -13,10 +13,10 @@
 import posix_crawler
 
 
-def launch_crawler(conn, cur, crawler_type, path):
+def launch_crawler(conn, cur, crawler_type, path, extracted_files_dir):
 
     if crawler_type == 'local' or 'posix':
-        response = posix_crawler.launch_crawler(conn, cur, path)
+        response = posix_crawler.launch_crawler(conn, cur, path, extracted_files_dir)
 
     elif crawler_type == 'globus':
         print("TODO: ADD GLOBUS!")
