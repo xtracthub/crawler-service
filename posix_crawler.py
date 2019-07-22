@@ -87,6 +87,16 @@ def write_metadata_to_postgres(conn, cur, info_tuple):
     conn.commit()
 
 
+def recursive_compress_check(extracted_files_dir):
+    f = []
+    for dirpath, dirnames, filenames in os.walk(extracted_files_dir):
+        f.append(dirpath)
+    print(f)
+
+recursive_compress_check('.')
+
+
+
 def get_decompressed_metadata(conn, cur, extracted_files_dir):
     r = []
     sub_dirs = [x[0] for x in os.walk(extracted_files_dir)]
@@ -158,6 +168,7 @@ def launch_crawler(conn, cur, repo_path, extracted_files_dir):
     crawl_secs = t1-t0
 
     return {"crawl_secs": crawl_secs, "status": "DONE"}
+
 
 
 

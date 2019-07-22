@@ -75,5 +75,4 @@ def decompress_file(file_path, extract_path):
         print(".Z error")
         pass
 
-unzip('decompresser_tests/junk.zip', 'blah')
 
