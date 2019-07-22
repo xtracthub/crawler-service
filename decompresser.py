@@ -1,7 +1,7 @@
 import os, zipfile, tarfile, zlib, gzip, pathlib
 from subprocess import run
 
-""" This file takes a list of compressed files, extracts contents, and disposes of compressed file. 
+""" This file takes a file path and decompresses it to an extraction path. 
     compressions = ["zip*", "gz*", "tar*", "z*", "zipx", "zz", "tgz" "rar", "7z", "s7z"]
     @Author: Tyler J. Skluzacek (skluzacek@uchicago.edu)
     @LastEdited: 08/20/2017 
@@ -9,34 +9,53 @@ from subprocess import run
 
 
 def unzip(file_path, extract_path):
-    if not(file_path.endswith(".zip")):  # check for ".zip" extension
+    """Extracts contents of a .zip file to another directory.
+
+    Parameters:
+    file_path (str): File path to .zip file.
+    extract_path (str): File path to extract contents of file_path to.
+    """
+    if file_path.endswith(".zip"):
         file_name = os.path.abspath(file_path)
         zipfile.ZipFile(file_name, 'r').extractall(extract_path)
 
 
 def untar(file_path, extract_path):
-    if file_path.endswith(".tar.gz") or file_path.endswith(".tar"):
+    """Extracts contents of a .tar.gz, .tar, or .tgz file to another directory.
+
+    Creates a directory with the file's name and extracts contents into it.
+
+    Parameters:
+    file_path (str): File path to .tar.gz, .tar, or .tgz file.
+    extract_path (str): File path to extract contents of file_path to.
+    """
+    if file_path.endswith(".tar.gz") or file_path.endswith(".tar") or file_path.endswith(".tgz"):
         file_name = os.path.abspath(file_path)
         base_path = os.path.basename(file_name)
         base_path_no_extention = base_path[:base_path.index('.')]
         extract_path = os.path.join(extract_path, base_path_no_extention)
-
         tarfile.TarFile.open(file_name).extractall(extract_path)
 
 
-# Waiting for a .Z file sample
-def unZ(file_path):
-    if file_path.endswith(".Z"):  # check for ".zip" extension
-        file_name = os.path.abspath(file_path)  # get full path of files
-        run("uncompress " + file_path, shell=True)  # Decompress
+def unZ(file_path, extract_path):
+    """Extracts contents of a .z or .gz file to another directory.
+
+    Extracts using a unix command and moves the extracted file to extract_path.
+
+    Parameters:
+    file_path (str): File path to .z  or .gz file.
+    extract_path (str): File path to extract contents of file_path to.
+    """
+    if file_path.endswith(".z") or file_path.endswith(".gz") or file_path.endswith(".Z"):
+        file_name = os.path.abspath(file_path)
+        run("gzip -dk " + file_name, shell=True)
+
+        file_name_no_extention = os.path.join(os.path.dirname(file_path),
+                                              os.path.splitext(os.path.basename(file_name))[0])
+        run("mv " + file_name_no_extention + " " + extract_path, shell=True)
 
 
-#def ungz(file_path, extract_path):
-
-
-
-
-def list_files(file_path, extract_path):
+def decompress_file(file_path, extract_path):
     try:
         unzip(file_path, extract_path)
 
@@ -56,11 +75,5 @@ def list_files(file_path, extract_path):
         print(".Z error")
         pass
 
-
-# with zipfile.ZipFile('C:/Users/space/Documents/CS/CDAC/official_xtract'
-#                      '/xtract-crawler/decompresser_tests/Zip/junk.zip',
-#                      'r') as zip_ref:
-#     zip_ref.extractall('.')
-unZ('C:/Users/space/Documents/CS/CDAC/official_xtract/xtract-crawler'
-    '/decompresser_tests/SEP94L.Z')
+unzip('decompresser_tests/junk.zip', 'blah')
 
