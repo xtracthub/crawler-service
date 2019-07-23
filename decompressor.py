@@ -1,4 +1,6 @@
-import os, zipfile, tarfile, zlib, gzip, pathlib
+import os
+import zipfile
+import tarfile
 from subprocess import run
 
 """ This file takes a file path and decompresses it to an extraction path. 
@@ -16,8 +18,7 @@ def unzip(file_path, extract_path):
     extract_path (str): File path to extract contents of file_path to.
     """
     if file_path.endswith(".zip"):
-        file_name = os.path.abspath(file_path)
-        zipfile.ZipFile(file_name, 'r').extractall(extract_path)
+        zipfile.ZipFile(file_path, 'r').extractall(extract_path)
 
 
 def untar(file_path, extract_path):
@@ -30,11 +31,10 @@ def untar(file_path, extract_path):
     extract_path (str): File path to extract contents of file_path to.
     """
     if file_path.endswith(".tar.gz") or file_path.endswith(".tar") or file_path.endswith(".tgz"):
-        file_name = os.path.abspath(file_path)
-        base_path = os.path.basename(file_name)
+        base_path = os.path.basename(file_path)
         base_path_no_extention = base_path[:base_path.index('.')]
         extract_path = os.path.join(extract_path, base_path_no_extention)
-        tarfile.TarFile.open(file_name).extractall(extract_path)
+        tarfile.TarFile.open(file_path).extractall(extract_path)
 
 
 def unZ(file_path, extract_path):
@@ -46,13 +46,12 @@ def unZ(file_path, extract_path):
     file_path (str): File path to .z  or .gz file.
     extract_path (str): File path to extract contents of file_path to.
     """
-    if file_path.endswith(".z") or file_path.endswith(".gz") or file_path.endswith(".Z"):
-        file_name = os.path.abspath(file_path)
-        run("gzip -dk " + file_name, shell=True)
+    if file_path.endswith(".gz") or file_path.endswith(".Z"):
+        run("gzip -dk " + file_path, shell=True)
 
-        file_name_no_extention = os.path.join(os.path.dirname(file_path),
-                                              os.path.splitext(os.path.basename(file_name))[0])
-        run("mv " + file_name_no_extention + " " + extract_path, shell=True)
+        file_name_no_extension = os.path.join(os.path.dirname(file_path),
+                                              os.path.splitext(os.path.basename(file_path))[0])
+        run("mv " + file_name_no_extension + " " + extract_path, shell=True)
 
 
 def decompress_file(file_path, extract_path):
@@ -72,8 +71,18 @@ def decompress_file(file_path, extract_path):
     try:
         unZ(file_path, extract_path)
     except:
-        print(".Z error")
+        print(".Z or .gzip error")
         pass
 
-unzip('decompresser_tests/junk.zip', 'blah')
 
+# 7z Test code
+# def un7z(file_path, extract_path):
+#     with libarchive.file_reader(file_path) as e:
+#         for entry in e:
+#             # if os.path.basename(str(entry)) is '':
+#             #     os.mkdir(os.path.join(extract_path, str(entry)))
+#
+#             with open(extract_path + os.path.basename(str(
+#                     entry)), 'wb') as f:
+#                 for block in entry.get_blocks():
+#                     f.write(block)

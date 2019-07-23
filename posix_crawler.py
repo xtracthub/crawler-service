@@ -16,7 +16,7 @@ import json
 import time
 import psycopg2
 import hashlib
-from decompresser import decompress_file
+from decompressor import decompress_file
 
 
 def _get_extension(filepath):
@@ -43,7 +43,7 @@ def _make_parent_dir(fpath):
 
 def is_compressed(filename):
     file_type = _get_extension(filename)
-    zips = ["zip", "tar", "z", "gz", "tgz", "Z"]
+    zips = ["zip", "tar", "gz", "tgz", "Z"]
 
     return True if file_type in zips else False
 
@@ -72,19 +72,42 @@ def write_metadata_to_postgres(conn, cur, info_tuple):
         inform the user that they. """
 
     # Postgres annoyingly needs single-quotes on everything
-    path, file_size, extension = info_tuple
+    path, file_size, extension, file_hash = info_tuple
     meta_empty = json.dumps({})
 
     # TODO: Change this to actual file_ids from files table.
     file_id = 1
 
-    query = """INSERT INTO metadata (file_id, extension, size_mb, metadata) VALUES ('{}', '{}', {}, '{}');"""
-    query = query.format(file_id, extension, file_size, meta_empty)
+    query = """INSERT INTO metadata (file_id, extension, size_mb, file_hash, metadata) VALUES ('{}', '{}, ''{}', '{}', '{}');"""
+    query = query.format(file_id, extension, file_size, file_hash, meta_empty)
 
     print(query)
 
     cur.execute(query)
     conn.commit()
+
+
+def recursive_compress_check_helper(extracted_files_dir, compressed_files):
+    sub_dirs = [x[0] for x in os.walk(extracted_files_dir)]
+
+    for subdir in sub_dirs:
+        files = os.walk(subdir).__next__()[2]
+        if len(files) > 0:
+            for item in files:
+                if is_compressed(item) and item not in compressed_files:
+                    decompress_file(os.path.join(subdir, item),
+                                    extracted_files_dir)
+                    compressed_files.append(item)
+                    compressed_files = recursive_compress_check_helper(extracted_files_dir,
+                                                                       compressed_files)
+                else:
+                    pass
+
+    return compressed_files
+
+
+def recursive_compress_check(extracted_files_dir):
+    recursive_compress_check_helper(extracted_files_dir, [])
 
 
 def get_decompressed_metadata(conn, cur, extracted_files_dir):
@@ -95,11 +118,10 @@ def get_decompressed_metadata(conn, cur, extracted_files_dir):
         files = os.walk(subdir).__next__()[2]
         if len(files) > 0:
             for item in files:
-                file_path = subdir + "/" + item
+                file_path = os.path.join(subdir, item)
                 file_size = os.stat(file_path).st_size
                 extension = _get_extension(file_path)
                 file_hash = md5_hasher(file_path)
-                print(file_path, file_size, extension, file_hash)
                 try:
                     write_metadata_to_postgres(conn, cur, (file_path, file_size
                                                            , extension,
@@ -128,11 +150,10 @@ def get_metadata(conn, cur, directory, extracted_files_dir):
         if len(files) > 0:
             for item in files:
                 print(item)
-                file_path = subdir + "/" + item
+                file_path = os.path.join(subdir, item)
                 file_size = os.stat(file_path).st_size
                 extension = _get_extension(file_path)
                 file_hash = md5_hasher(file_path)
-                print(file_path, file_size, extension, file_hash)
                 try:
                     write_metadata_to_postgres(conn, cur, (file_path, file_size
                                                            , extension,
@@ -144,6 +165,7 @@ def get_metadata(conn, cur, directory, extracted_files_dir):
                 if is_compressed(item):
                     decompress_file(file_path, extracted_files_dir)
 
+    recursive_compress_check(extracted_files_dir)
     get_decompressed_metadata(conn, cur, extracted_files_dir)
 
     return r
