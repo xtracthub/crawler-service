@@ -110,7 +110,7 @@ def recursive_compress_check(extracted_files_dir):
     recursive_compress_check_helper(extracted_files_dir, [])
 
 
-def get_decompressed_metadata(conn, cur, extracted_files_dir):
+def get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir):
     r = []
     sub_dirs = [x[0] for x in os.walk(extracted_files_dir)]
 
@@ -122,24 +122,27 @@ def get_decompressed_metadata(conn, cur, extracted_files_dir):
                 file_size = os.stat(file_path).st_size
                 extension = _get_extension(file_path)
                 file_hash = md5_hasher(file_path)
-                try:
-                    write_metadata_to_postgres(conn, cur, (file_path, file_size
-                                                           , extension,
-                                                           file_hash))
-                except psycopg2.Error as e:
-                    print(e)
-                    pass
+                if json_or_server == "json":
+                    r[file_path] = {"file_path": str(file_path), "file_size": str(file_size), "extension": extension,
+                                    "file_hash": file_hash}
+                else:
+                    try:
+                        write_metadata_to_postgres(conn, cur, (file_path, file_size
+                                                               , extension,
+                                                               file_hash))
+                    except psycopg2.Error as e:
+                        print(e)
+                        pass
 
     return r
 
 
-def get_metadata(conn, cur, directory, extracted_files_dir):
+def get_metadata(json_or_server, directory, extracted_files_dir, conn=None, cur=None):
     """Crawl local filesystem. Return state (i.e, file list)
         :param directory string representing root level directory path """
 
-    r = []
+    r = {}
     sub_dirs = [x[0] for x in os.walk(directory)]
-
     try:
         os.makedirs(extracted_files_dir)
     except:
@@ -149,32 +152,42 @@ def get_metadata(conn, cur, directory, extracted_files_dir):
         files = os.walk(subdir).__next__()[2]
         if len(files) > 0:
             for item in files:
-                print(item)
                 file_path = os.path.join(subdir, item)
                 file_size = os.stat(file_path).st_size
                 extension = _get_extension(file_path)
                 file_hash = md5_hasher(file_path)
-                try:
-                    write_metadata_to_postgres(conn, cur, (file_path, file_size
-                                                           , extension,
-                                                           file_hash))
-                except psycopg2.Error as e:
-                    print(e)
-                    pass
+                if json_or_server == "json":
+                    r[file_path] = {"file_path": str(file_path), "file_size": str(file_size), "extension": extension,
+                                    "file_hash": file_hash}
+                else:
+                    try:
+                     write_metadata_to_postgres(conn, cur, (file_path, file_size
+                                                             , extension,
+                                                               file_hash))
+                    except psycopg2.Error as e:
+                        print(e)
+                        pass
 
                 if is_compressed(item):
                     decompress_file(file_path, extracted_files_dir)
 
     recursive_compress_check(extracted_files_dir)
-    get_decompressed_metadata(conn, cur, extracted_files_dir)
+    get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir)
 
     return r
 
 
-def launch_crawler(conn, cur, repo_path, extracted_files_dir):
+def launch_crawler(json_or_server, repo_path, extracted_files_dir, conn=None, cur=None, json_name=None):
     t0 = time.time()
     directory_input = repo_path
-    get_metadata(conn, cur, directory_input, extracted_files_dir)
+
+    if json_or_server == "json":
+        metadata_dict = get_metadata("json", directory_input, extracted_files_dir)
+        with open(json_name, 'w') as json_file:
+            json.dump(metadata_dict, json_file)
+    else:
+        get_metadata("server", directory_input, extracted_files_dir, conn=None, cur=None)
+
     t1 = time.time()
 
     crawl_secs = t1-t0

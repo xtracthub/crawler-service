@@ -13,14 +13,20 @@
 import posix_crawler
 
 
-def launch_crawler(conn, cur, crawler_type, path, extracted_files_dir):
+def launch_crawler(crawler_type, json_or_server, path, extracted_files_dir, json_name=None, conn=None, cur=None):
 
     if crawler_type == 'local' or 'posix':
-        response = posix_crawler.launch_crawler(conn, cur, path, extracted_files_dir)
+        if json_or_server == "json":
+            response = posix_crawler.launch_crawler("json", path, extracted_files_dir, json_name=json_name)
+        elif json_or_server == "server":
+            response = posix_crawler.launch_crawler("server", path, extracted_files_dir, conn=conn, cur=cur)
+        else:
+            print("Invalid output type")
 
     elif crawler_type == 'globus':
         print("TODO: ADD GLOBUS!")
 
     return response
+
 
 
