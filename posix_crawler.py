@@ -20,7 +20,14 @@ from decompressor import decompress_file
 
 
 def _get_extension(filepath):
+    """Returns the extension of a filepath.
 
+    Parameter:
+    filepath (str): Filepath to get extension of.
+
+    Return:
+    extension (str): Extension of filepath.
+    """
     filename = filepath.split('/')[-1]
     extension = None
 
@@ -30,7 +37,7 @@ def _get_extension(filepath):
     return extension
 
 
-def _make_parent_dir(fpath):
+def _make_parent_dir(fpath): # TODO: Does this do anything?
     """ Does path (given a file) actually exist?
         :param fpath -- path to the file. """
     dirname = os.path.dirname(fpath)
@@ -42,6 +49,14 @@ def _make_parent_dir(fpath):
 
 
 def is_compressed(filename):
+    """Finds whether a filename has a compressed extension.
+
+    Parameter:
+    filename (str): Filename to check for compression.
+
+    Return:
+    (bool): Whether filename is compressed or not.
+    """
     file_type = _get_extension(filename)
     zips = ["zip", "tar", "gz", "tgz", "Z"]
 
@@ -54,6 +69,15 @@ def dup_check(file_id):
 
 
 def md5_hasher(file_path, buff_size=65536):
+    """Hashes a file using md5.
+
+    Parameters:
+    file_path (str): File path of file to hash.
+    buff_size (int): Size of chunks to process file_path in.
+
+    Return:
+    (str): Hexidecimal version of md5 hashed file_path.
+    """
     md5hash = hashlib.md5()
     with open(file_path, 'rb') as file:
         while True:
@@ -88,6 +112,16 @@ def write_metadata_to_postgres(conn, cur, info_tuple):
 
 
 def recursive_compress_check_helper(extracted_files_dir, compressed_files):
+    """Helper function for recursive_compress_check. Recursively checks whether
+    there are compressed files in a directory, and extracts them to a separate directory.
+
+    Parameters:
+    extracted_files_dir (str): Directory with compressed files to extract.
+    compressed_files (list): List of compressed files already extracted.
+
+    Return:
+    compressed_files (list): List of extracted compressed files.
+    """
     sub_dirs = [x[0] for x in os.walk(extracted_files_dir)]
 
     for subdir in sub_dirs:
@@ -100,18 +134,32 @@ def recursive_compress_check_helper(extracted_files_dir, compressed_files):
                     compressed_files.append(item)
                     compressed_files = recursive_compress_check_helper(extracted_files_dir,
                                                                        compressed_files)
-                else:
-                    pass
 
     return compressed_files
 
 
 def recursive_compress_check(extracted_files_dir):
+    """Recursively extracts a directory with compressed files.
+
+    Parameter:
+    extract_files_dir (str): Directory with compressed files to extract.
+    """
     recursive_compress_check_helper(extracted_files_dir, [])
 
 
 def get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir):
-    r = []
+    """Gets file path, file size, extension, and file hash of file in a directory.
+
+    Parameters:
+    json_or_server (str): "json" or "server", whether to write metadata to a server or to return it as a dictionary.
+    conn:
+    cur:
+    extracted_files_dir (str): Directory of files to extract metadata from.
+
+    Return:
+    r (dict): Dictionary of metadata for each file is json_or_server is "json", or else returns empty dict.
+    """
+    r = {}
     sub_dirs = [x[0] for x in os.walk(extracted_files_dir)]
 
     for subdir in sub_dirs:
@@ -139,7 +187,18 @@ def get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir):
 
 def get_metadata(json_or_server, directory, extracted_files_dir, conn=None, cur=None):
     """Crawl local filesystem. Return state (i.e, file list)
-        :param directory string representing root level directory path """
+
+    Parameters:
+    json_or_server (str): "json" or "server", whether to write metadata to a server or to return it as a dictionary.
+    directory (str): Root level directory path.
+    extracted_files_dir (str): Name of directory to extract compressed files to, if the directory doesn't exist, it is
+    made.
+    conn:
+    cur:
+
+    Return:
+    r (dict): Dictionary of metadata for each file is json_or_server is "json", or else returns empty dict.
+    """
 
     r = {}
     sub_dirs = [x[0] for x in os.walk(directory)]
@@ -161,9 +220,7 @@ def get_metadata(json_or_server, directory, extracted_files_dir, conn=None, cur=
                                     "file_hash": file_hash}
                 else:
                     try:
-                     write_metadata_to_postgres(conn, cur, (file_path, file_size
-                                                             , extension,
-                                                               file_hash))
+                        write_metadata_to_postgres(conn, cur, (file_path, file_size, extension, file_hash))
                     except psycopg2.Error as e:
                         print(e)
                         pass
@@ -172,12 +229,26 @@ def get_metadata(json_or_server, directory, extracted_files_dir, conn=None, cur=
                     decompress_file(file_path, extracted_files_dir)
 
     recursive_compress_check(extracted_files_dir)
-    get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir)
+    r.update(get_decompressed_metadata(json_or_server, conn, cur, extracted_files_dir))
 
     return r
 
 
 def launch_crawler(json_or_server, repo_path, extracted_files_dir, conn=None, cur=None, json_name=None):
+    """Crawls through a directory.
+
+    Parameters:
+    json_or_server (str): "json" or "server", whether to write metadata to a server or to return it as a dictionary.
+    repo_path (str): Root level directory path.
+    extracted_files_dir (str): Name of directory to extract compressed files to, if the directory doesn't exist, it is
+    made.
+    conn:
+    cur:
+    json_name (str): Name of json file to write file metadata to.
+
+    Return:
+    (dict): Dictionary containing crawl time and status.
+    """
     t0 = time.time()
     directory_input = repo_path
 
@@ -193,6 +264,7 @@ def launch_crawler(json_or_server, repo_path, extracted_files_dir, conn=None, cu
     crawl_secs = t1-t0
 
     return {"crawl_secs": crawl_secs, "status": "DONE"}
+
 
 
 
