@@ -117,7 +117,7 @@ def crawl(transfer, start_dir):
         try:
             for entry in transfer.operation_ls(PETREL_ID, path=cur_dir):
 
-                full_path = cur_dir + entry['name']
+                full_path = cur_dir + "/" + entry['name']
                 # print(full_path)
                 if entry['type'] == 'file':
                     extension = get_extension(entry["name"])
@@ -128,7 +128,7 @@ def crawl(transfer, start_dir):
                         print("COUNT: {}".format(COUNT))
 
                 elif entry['type'] == 'dir':
-                    full_path = cur_dir + "/" + entry['name']
+                    full_path = cur_dir + "/" + entry['name'] + "/"
                     to_crawl.put(full_path)
 
         except TransferAPIError as e:
@@ -193,10 +193,10 @@ def main():
 
     # TODO: Unhardcode the crawlable directory name.
     # crawl(transfer, '/~/cdiac/cdiac.ornl.gov/pub8old/oceans')
-    # crawl(transfer, '/~/MDF/mdf_connect/prod/data/_test_person_simple_v1.1/')
+    crawl(transfer, '/~/MDF/mdf_connect/prod//data/ab_initio_solute_database_v1-2/data/FCC_solute_PdLa_20140930T154518/')
     import time 
     t0 = time.time()
-    crawl(transfer, '/~/MDF/mdf_connect/prod/')
+    #crawl(transfer, '/~/MDF/mdf_connect/prod/')
     t1 = time.time()
 
     print(t1-t0)
