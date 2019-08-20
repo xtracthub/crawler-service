@@ -194,11 +194,12 @@ def main():
     # TODO: Unhardcode the crawlable directory name.
     # crawl(transfer, '/~/cdiac/cdiac.ornl.gov/pub8old/oceans')
     # crawl(transfer, '/~/MDF/mdf_connect/prod/data/_test_person_simple_v1.1/')
-    
     import time 
     t0 = time.time()
     crawl(transfer, '/~/MDF/mdf_connect/prod/')
     t1 = time.time()
+
+    print(t1-t0)
 
 if __name__ == '__main__':
     main()
