@@ -1,3 +1,4 @@
+cython
 funcx
 globus_sdk
 psycopg2-binary
