@@ -1,7 +1,7 @@
 flask
 Flask-API
 requests
---upgrade hyperspy
+hyperspy
 pymatgen
 tableschema
 globus_sdk
