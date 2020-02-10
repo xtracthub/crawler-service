@@ -1,0 +1,8 @@
+flask
+Flask-API
+requests
+--upgrade hyperspy
+pymatgen
+tableschema
+globus_sdk
+psycopg2
