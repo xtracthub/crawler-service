@@ -6,6 +6,7 @@ dfttopif
 Pillow
 # numpy
 # pymatgen
+git+https://github.com/materials-data-facility/MaterialsIO.git
 hyperspy
 tableschema
 flask
