@@ -9,6 +9,10 @@ import threading
 
 application = Flask(__name__)
 
+# TODO: remove all calls to the database from this application.
+# TODO:     - Switch to queues+workers for pushing crawl metadata
+# TODO:     - Have the main service get all status checks.
+
 
 def crawl_launch(crawler, tc):
     crawler.crawl(tc)
@@ -40,18 +44,6 @@ def crawl_repo():
     crawl_thread.start()
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
-
-
-# @application.route('/get_crawl_status', methods=['GET'])
-# def get_cr_status():
-#
-#     r = request.json
-#
-#     crawl_id = r["crawl_id"]
-#     resp = get_crawl_status(crawl_id)
-#     print(resp)
-#
-#     return resp
 
 
 if __name__ == '__main__':
