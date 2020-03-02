@@ -15,13 +15,10 @@ import psycopg2
 from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
 from globus_sdk import (TransferClient, AccessTokenAuthorizer, ConfidentialAppAuthClient)
-from funcx.serialize import FuncXSerializer
 
 from .groupers import matio_grouper
 
 from .base import Crawler
-
-fx_ser = FuncXSerializer()
 
 
 class GlobusCrawler(Crawler):
@@ -163,6 +160,7 @@ class GlobusCrawler(Crawler):
                     # TODO: Be less broad here.
                     except GlobusTimeoutError as e:
                         logging.error("Globus Timeout Error -- retrying")
+                        logging.info(e)
                         pass
 
                     except Exception as e:
@@ -209,7 +207,6 @@ class GlobusCrawler(Crawler):
                         file_list = list(gr)
 
                         group_info["files"] = file_list
-                        # print(group_info)
 
                         for f in file_list:
                             self.file_counter += 1
@@ -220,8 +217,6 @@ class GlobusCrawler(Crawler):
                                 pass
 
                         logging.info(group_info)
-
-                        # from psycopg2.extras import Json
 
                         cur = self.conn.cursor()
 
