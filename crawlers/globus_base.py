@@ -9,7 +9,6 @@ import threading
 
 from datetime import datetime
 from utils.pg_utils import pg_conn, pg_list
-import pickle as pkl
 
 from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
