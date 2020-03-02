@@ -236,7 +236,7 @@ class GlobusCrawler(Crawler):
                             # TODO: This try/except exists only because of occasinoal pg char issue -- should fix.
                             # try:
                             query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner) " \
-                                f"VALUES ('{gr_id}', {fx_ser.serialize(group_info)}, '{files}', '{parsers}', '{self.token_owner}')"
+                                f"VALUES ('{gr_id}', {fx_ser.serialize(group_info).encode()}, '{files}', '{parsers}', '{self.token_owner}')"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
