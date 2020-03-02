@@ -13,11 +13,13 @@ from utils.pg_utils import pg_conn, pg_list
 from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
 from globus_sdk import (TransferClient, AccessTokenAuthorizer, ConfidentialAppAuthClient)
-
+from funcx.serialize import FuncXSerializer
 
 from .groupers import matio_grouper
 
 from .base import Crawler
+
+fx_ser = FuncXSerializer()
 
 
 class GlobusCrawler(Crawler):
@@ -133,6 +135,8 @@ class GlobusCrawler(Crawler):
                 raise ex
         return transfer
 
+    # TODO: Live crawl tracking failing bc this never joins.
+    # TODO: Create a poller that terminates the worker threads.
     def launch_crawl_worker(self, transfer, worker_id):
         logging.basicConfig(format=f"%(asctime)s - %(message)s', filename='crawler_{worker_id}.log", level=logging.INFO)
         t_last = time.time()
@@ -215,7 +219,7 @@ class GlobusCrawler(Crawler):
 
                         logging.info(group_info)
 
-                        from psycopg2.extras import Json
+                        # from psycopg2.extras import Json
 
                         cur = self.conn.cursor()
 
@@ -232,7 +236,7 @@ class GlobusCrawler(Crawler):
                             # TODO: This try/except exists only because of occasinoal pg char issue -- should fix.
                             # try:
                             query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner) " \
-                                f"VALUES ('{gr_id}', {Json(group_info)}, '{files}', '{parsers}', '{self.token_owner}')"
+                                f"VALUES ('{gr_id}', {fx_ser.serialize(group_info)}, '{files}', '{parsers}', '{self.token_owner}')"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
