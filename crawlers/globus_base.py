@@ -246,6 +246,7 @@ class GlobusCrawler(Crawler):
                             # self.file_counter += 1
                             # try:
                             group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
+                            # TODO: TYLER -- you're currently debugging this OPE issue. This comment is only thing not pushed.
                             #  except:
                             #     print("Ope. ")
                             #     pass
@@ -327,3 +328,4 @@ class GlobusCrawler(Crawler):
         with open('failed_groups.json', 'w') as gp:
             json.dump(self.failed_groups, gp)
 
+print("FORCE EB TO UPDATE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
