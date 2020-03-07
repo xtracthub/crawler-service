@@ -244,11 +244,11 @@ class GlobusCrawler(Crawler):
 
                         for f in file_list:
                             # self.file_counter += 1
-                            try:
-                                group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
-                            except:
-                                print("Ope. ")
-                                pass
+                            # try:
+                            group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
+                            # except:
+                            #     print("Ope. ")
+                            #     pass
 
                         logging.info(group_info)
 
