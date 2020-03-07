@@ -34,6 +34,11 @@ class GlobusCrawler(Crawler):
         self.crawl_id = crawl_id
         self.crawl_hb = 10
 
+        self.crawl_status = "STARTING"
+        self.worker_status_dict = {}
+        self.idle_worker_count = 0
+        self.max_crawl_threads = 4
+
         self.images = []
         self.matio = []
         self.keyword = []
@@ -138,17 +143,44 @@ class GlobusCrawler(Crawler):
     # TODO: Create a poller that terminates the worker threads.
     def launch_crawl_worker(self, transfer, worker_id):
         logging.basicConfig(format=f"%(asctime)s - %(message)s', filename='crawler_{worker_id}.log", level=logging.INFO)
-        t_last = time.time()
         mdata_blob = {}
-        self.file_counter=0
+        # self.file_counter = 0
+        self.worker_status_dict[worker_id] = "STARTING"
 
         while True:
 
+            # If so, then we want the worker to return.
             if self.to_crawl.empty():
+                # This worker sees an empty queue, AND IF NOT ALREADY "IDLE", should become "IDLE"
+                if self.worker_status_dict[worker_id] is not "IDLE":
+                    print(f"Worker ID: {worker_id} demoted to IDLE.")
+                    self.worker_status_dict[worker_id] = "IDLE"
+                    self.idle_worker_count += 1
+
+                # If to_crawl is empty, we want to check and see if other crawl_workers idle AND not in 'starting state'
+                # If all of the workers are idle AND state != 'STARTING'.
+                if self.idle_worker_count >= self.max_crawl_threads:
+                    print(f"Worker ID: {worker_id} is terminating.")
+                    return "CRAWL--COMPLETE"  # TODO: Behavior for collapsing a thread w/ no real return val?
                 continue
 
-            cur_dir = self.to_crawl.get()
-            restart_loop = False
+            # OTHERWISE, pluck an item from queue.
+            else:
+                # Catch the RARE race condition error where queue HAD elements in check, but has since become empty.
+                try:
+                    cur_dir = self.to_crawl.get()
+                    restart_loop = False
+                except Exception as e:
+                    print("Caught the following race condition exception... ignoring...")
+                    print(e)
+
+                    # Go back to beginning and check queue again.
+                    continue
+
+            # In the case where we successfully extracted from queue AND worker not "ACTIVE", make it active.
+            if self.worker_status_dict[worker_id] is not "ACTIVE":
+                self.worker_status_dict[worker_id] = "ACTIVE"
+                print(f"Worker ID: {worker_id} promoted to ACTIVE.")
 
             try:
                 while True:
@@ -162,6 +194,8 @@ class GlobusCrawler(Crawler):
                         logging.error("Globus Timeout Error -- retrying")
                         logging.info(e)
                         pass
+
+
 
                     except Exception as e:
 
@@ -209,7 +243,7 @@ class GlobusCrawler(Crawler):
                         group_info["files"] = file_list
 
                         for f in file_list:
-                            self.file_counter += 1
+                            # self.file_counter += 1
                             try:
                                 group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
                             except:
@@ -244,16 +278,6 @@ class GlobusCrawler(Crawler):
                             # except:
                             #     logging.error("Failure pushing to postgres...")
                             #     pass
-                        t_new = time.time()
-
-                        if t_new - t_last >= self.crawl_hb:
-                            logging.info(f"Total groups processed for crawl_id {self.crawl_id}: {self.group_count}")
-                            t_last = t_new
-                            print(f"Worker ID {worker_id} still alive!")
-                            print(f"Image count: {len(self.images)}")
-                            print(f"Matio count: {len(self.matio)}")
-                            print(f"JSONXml count: {len(self.jsonxml)}")
-                            print(f"Keyword Count {len(self.keyword)}")
 
                         mdata_blob = {}
 
@@ -264,6 +288,7 @@ class GlobusCrawler(Crawler):
                 logging.error(e)
                 self.failed_dirs["failed"].append(cur_dir)
                 continue
+
 
     def crawl(self, transfer):
         dir_name = "./xtract_metadata"
@@ -283,7 +308,7 @@ class GlobusCrawler(Crawler):
         self.conn.commit()
 
         list_threads = []
-        for i in range(4):
+        for i in range(self.max_crawl_threads):
             t = threading.Thread(target=self.launch_crawl_worker, args=(transfer, i))
             list_threads.append(t)
             t.start()
