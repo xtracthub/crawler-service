@@ -246,7 +246,7 @@ class GlobusCrawler(Crawler):
                             # self.file_counter += 1
                             # try:
                             group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
-                            # except:
+                            #  except:
                             #     print("Ope. ")
                             #     pass
 
