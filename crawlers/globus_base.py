@@ -37,7 +37,7 @@ class GlobusCrawler(Crawler):
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
         self.idle_worker_count = 0
-        self.max_crawl_threads = 4
+        self.max_crawl_threads = 1
 
         self.images = []
         self.matio = []
@@ -143,11 +143,12 @@ class GlobusCrawler(Crawler):
     # TODO: Create a poller that terminates the worker threads.
     def launch_crawl_worker(self, transfer, worker_id):
         logging.basicConfig(format=f"%(asctime)s - %(message)s', filename='crawler_{worker_id}.log", level=logging.INFO)
-        mdata_blob = {}
-        # self.file_counter = 0
+
+
         self.worker_status_dict[worker_id] = "STARTING"
 
         while True:
+            all_file_mdata = {}  # Holds all metadata for a given Globus directory.
 
             # If so, then we want the worker to return.
             if self.to_crawl.empty():
@@ -184,7 +185,6 @@ class GlobusCrawler(Crawler):
 
             try:
                 while True:
-
                     try:
                         dir_contents = transfer.operation_ls(self.eid, path=cur_dir)
                         break
@@ -194,8 +194,6 @@ class GlobusCrawler(Crawler):
                         logging.error("Globus Timeout Error -- retrying")
                         logging.info(e)
                         pass
-
-
 
                     except Exception as e:
 
@@ -212,44 +210,79 @@ class GlobusCrawler(Crawler):
                 if restart_loop:
                     continue
 
+                # Step 1. All files have own file metadata.
                 f_names = []
                 for entry in dir_contents:
 
+                    # print(f"[DEBUG] Entry: {entry}")
+
                     full_path = cur_dir + "/" + entry['name']
                     if entry['type'] == 'file':
+
                         f_names.append(full_path)
                         extension = self.get_extension(entry["name"])
-                        mdata_blob[full_path] = {"physical": {'size': entry['size'],
-                                                              "extension": extension, "path_type": "globus"}}
-                        # TODO: Save files to file DB.
 
+                        # print(f"Metadata for full path: {entry}")
+                        all_file_mdata[full_path] = {"physical": {'size': entry['size'],
+                                                              "extension": extension, "path_type": "globus"}}
+
+                        if full_path == "/MDF/mdf_connect/prod/data/_test_mayer_situ_observation_g20o995_v1.1/Ag3Al.cP20/OUTCAR":
+                            print("************************************************* (here)")
+                            # exit()
+
+                        # print(f"[DEBUG] Metadata blob: {all_file_mdata}")
                     elif entry['type'] == 'dir':
                         full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
 
+                    else:
+                        raise Exception("Fucking hell")
+
+                print(f"Finished parsing files. Metadata: {all_file_mdata}")
+
+                # Step 2. We want to process each potential group of files.
                 gr_dict = self.grouper.group(f_names)
+                print(f"gr_dict: {gr_dict}")
 
+                # Step 3. For all parsers...
                 for parser in gr_dict:
+                    print(f"Parser: {parser}")
 
-                    for gr in gr_dict[parser]:
-                        logging.debug(f"Group: {gr}")
-                        logging.debug(f"Parser: {parser}")
+                    # Cast as generator for debugging.
+                    gr_list = list(gr_dict[parser])
+                    # TODO print(f"gr_list: {gr_list}")
+
+                    # Step 4. For each group within a parser
+                    for gr in gr_list:
+
+                        print("IN GROUP-BY-PARSER LOOP...")
+                        print(f"Group Tuple: {gr}")
+
+                        # time.sleep(1)
 
                         gr_id = str(self.gen_group_id())
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
 
                         file_list = list(gr)
+                        # TODO
+                        # print(f"File list: {file_list}")
 
                         group_info["files"] = file_list
 
+                        # if len(file_list) > 0:
+                        #     raise Exception("derpderpderp")
+
                         for f in file_list:
-                            # self.file_counter += 1
                             # try:
-                            group_info["mdata"].append({"file": f, "blob": mdata_blob[f]})
-                            # TODO: TYLER -- you're currently debugging this OPE issue. This comment is only thing not pushed.
-                            #  except:
-                            #     print("Ope. ")
-                            #     pass
+                                # print(f"Group Info: {group_info}")
+
+                            group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
+                            # except Exception as e:
+                            #     #print("ERROR... ")
+                            #     print(f"Metadata Blob: {all_file_mdata}")
+                            #     print("Led to exception...")
+                            #     time.sleep(1)
+                            #     raise(e)
 
                         logging.info(group_info)
 
@@ -270,6 +303,7 @@ class GlobusCrawler(Crawler):
                             query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner) " \
                                 f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}')"
 
+                            print(group_info)
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
                             cur.execute(query)
@@ -280,7 +314,7 @@ class GlobusCrawler(Crawler):
                             #     logging.error("Failure pushing to postgres...")
                             #     pass
 
-                        mdata_blob = {}
+                        # all_file_mdata = {}
 
             # TODO: Is this unnecessary now?
             except TransferAPIError as e:
@@ -316,6 +350,7 @@ class GlobusCrawler(Crawler):
 
         for t in list_threads:
             t.join()
+
 
         logging.info(f"\n***FINAL groups processed for crawl_id {self.crawl_id}: {self.group_count}***")
         logging.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
