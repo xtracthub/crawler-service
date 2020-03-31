@@ -23,7 +23,7 @@ class MatIOGrouper:
             if parser in ['noop', 'generic']:
                 continue
 
-            p = get_parser(parser)
+            p = get_parser('dft')
             group = p.group(file_ls)
 
             group_coll[parser] = group
