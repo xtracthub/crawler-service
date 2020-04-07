@@ -50,20 +50,28 @@ class MatIOGrouper:
 
         print(f"Number of nodes: {gr.number_of_nodes()}")
         print(f"Number of edges: {gr.number_of_edges()}")
+
+        # So at this point, conn_comps is all files that must travel together.
+        return conn_comps
         # plt.subplot(121)
         # print("Drawing plot!")
         # nx.draw(gr, with_labels=False, font_weight="bold")
         #
         # plt.show()
 
-
-    def pack_groups(self, strategy='minimum'):
+    def pack_groups(self, conn_comps, strategy='minimum'):
         """ Input dict of all MatIO groups,
             Output 'minimum' dict of necessary MatIO families (for 'transfer only once' processing).
             # TODO: Support other strategies -- like 'full directory' and set_size.
         """
+        # Generate a unique identifier for each 'family' of groups (e.g., groups that must travel together).
+        family_uuid = str(uuid4())
 
-        family_uuid = uuid4()
+        families = {}
+        for comp in conn_comps:
+            families[family_uuid] = list(comp)
+
+        return families
 
     def group(self, file_ls):
         # Run each grouping and then each parser. Emulate the behavior in
@@ -85,6 +93,11 @@ class MatIOGrouper:
 
             group_coll[parser] = group
 
-        self.make_file_graph(group_coll)
+        # Get the connected components of the graph.
+        conn_comps = self.make_file_graph(group_coll)
 
-        return group_coll
+        # Use the connected components to generate a family for each connected component.
+        families = self.pack_groups(conn_comps)
+
+        print(families)
+        return families
