@@ -27,23 +27,23 @@ def hello():
 @application.route('/crawl', methods=['POST'])
 def crawl_repo():
 
-    # r = request.json
+    r = request.json
 
-    # endpoint_id = r['eid']
-    # starting_dir = r['dir_path']
-    # grouper = r['grouper']
-    # transfer_token = r['Transfer']
-    # auth_token = r['Authorization']
+    endpoint_id = r['eid']
+    starting_dir = r['dir_path']
+    grouper = r['grouper']
+    transfer_token = r['Transfer']
+    auth_token = r['Authorization']
 
-    # print(f"Received Transfer Token: {transfer_token}")
+    print(f"Received Transfer Token: {transfer_token}")
 
     crawl_id = uuid4()
-    # crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper)
-    # tc = crawler.get_transfer()
-    # crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
-    # crawl_thread.start()
+    crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper)
+    tc = crawler.get_transfer()
+    crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
+    crawl_thread.start()
 
-    return {"crawl_id": str(crawl_id)} # , status.HTTP_200_OK
+    return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
 
 if __name__ == '__main__':
