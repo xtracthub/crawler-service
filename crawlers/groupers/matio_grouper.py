@@ -70,9 +70,6 @@ class MatIOGrouper:
         for comp in conn_comps:
             family_uuid = str(uuid4())
 
-            # TODO: This shouldn't just pack the files into families.
-            #  This should find the associated groups that should go into families.
-
             for filename in comp:
                 gr_ids = file_groups_map[filename]
                 print(f"Group IDs: {gr_ids}")
@@ -122,19 +119,13 @@ class MatIOGrouper:
                     group_files_map[group_id] = {"files": [], "parser": parser}
                     group_files_map[group_id]["files"].append(filename)
 
-        print(file_groups_map)
-
         # Get the connected components of the graph.
         conn_comps = self.make_file_graph(group_coll)
 
         # Use the connected components to generate a family for each connected component.
-        # TODO: need this to also be aware of what files in what groups and return family_id accordingly.
         families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
 
-        # TODO: Then will need to add the files back to the group_ids before returning.
-
-        print("FAMILIES")
-        print(families)
+        print(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
         # print(families)
         return families
