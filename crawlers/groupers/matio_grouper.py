@@ -24,7 +24,7 @@ class MatIOGrouper:
         for parser in group_dict:
             print(parser)
             for item in group_dict[parser]:
-                print(item)
+                # print(item)
                 if len(item) > 1:
                     # print(item)
                     num_g_1 += 1
@@ -59,23 +59,38 @@ class MatIOGrouper:
         #
         # plt.show()
 
-    def pack_groups(self, conn_comps, strategy='minimum'):
+    def pack_groups(self, conn_comps, file_groups_map, group_files_map, strategy='minimum'):
         """ Input dict of all MatIO groups,
             Output 'minimum' dict of necessary MatIO families (for 'transfer only once' processing).
             # TODO: Support other strategies -- like 'full directory' and set_size.
         """
         # Generate a unique identifier for each 'family' of groups (e.g., groups that must travel together).
-        family_uuid = str(uuid4())
 
         families = {}
         for comp in conn_comps:
-            families[family_uuid] = list(comp)
+            family_uuid = str(uuid4())
+
+            # TODO: This shouldn't just pack the files into families.
+            #  This should find the associated groups that should go into families.
+
+            for filename in comp:
+                gr_ids = file_groups_map[filename]
+                print(f"Group IDs: {gr_ids}")
+
+                families[family_uuid] = {"groups": {}}
+
+                for gr_id in gr_ids:
+                    families[family_uuid]["groups"][gr_id] = group_files_map[gr_id]
 
         return families
 
     def group(self, file_ls):
         # Run each grouping and then each parser. Emulate the behavior in
         # https://github.com/materials-data-facility/MaterialsIO/blob/master/materials_io/utils/interface.py
+
+        # Index and inverted index of files and groups
+        file_groups_map = {}
+        group_files_map = {}
 
         parser_desc = get_available_parsers()
         parsers = [*parser_desc]  # This is a list of all applicable parsers.
@@ -91,13 +106,35 @@ class MatIOGrouper:
             p = get_parser(parser)
             group = p.group(file_ls)
 
-            group_coll[parser] = group
+            gr_list = list(group)
+
+            group_coll[parser] = gr_list
+
+            for gr in gr_list:
+                # Assign a group_id for each group.
+                group_id = str(uuid4())
+                for filename in gr:
+                    # print(gr_list)
+                    if filename not in file_groups_map:
+                        file_groups_map[filename] = [group_id]
+                    file_groups_map[filename].append(group_id)
+
+                    group_files_map[group_id] = {"files": [], "parser": parser}
+                    group_files_map[group_id]["files"].append(filename)
+
+        print(file_groups_map)
 
         # Get the connected components of the graph.
         conn_comps = self.make_file_graph(group_coll)
 
         # Use the connected components to generate a family for each connected component.
-        families = self.pack_groups(conn_comps)
+        # TODO: need this to also be aware of what files in what groups and return family_id accordingly.
+        families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
 
+        # TODO: Then will need to add the files back to the group_ids before returning.
+
+        print("FAMILIES")
         print(families)
+
+        # print(families)
         return families

@@ -240,7 +240,7 @@ class GlobusCrawler(Crawler):
                 for parser in gr_dict:
                     logging.debug(f"Parser: {parser}")
 
-                    # Cast as generator for debugging.
+                    # Cast generator as list for debugging.
                     gr_list = list(gr_dict[parser])
 
                     # Step 4. For each group within a parser
