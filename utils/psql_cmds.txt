@@ -59,3 +59,9 @@ CREATE TABLE group_metadata (
   owner varchar(50)
   );
 
+  # num_groups INT NOT NULL,
+  # total_bytes INT NOT NULL DEFAULT 0)
+
+ALTER TABLE group_metadata_2
+  ADD COLUMN family_id VARCHAR(40) NOT NULL DEFAULT 'NA';
+
