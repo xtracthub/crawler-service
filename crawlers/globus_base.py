@@ -248,11 +248,6 @@ class GlobusCrawler(Crawler):
                         gr_id = group
                         file_list = groups[group]["files"]
 
-
-
-                        # Step 4. For each group within a parser
-                        # for gr in gr_list:
-
                         logging.debug("IN GROUP-BY-PARSER LOOP...")
                         logging.debug(f"Group Tuple: {group}")
 
@@ -280,8 +275,8 @@ class GlobusCrawler(Crawler):
 
                         else:
                             # TODO: Occasional pg char issue -- should fix.
-                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner) " \
-                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}')"
+                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner, family_id) " \
+                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}')"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
