@@ -233,26 +233,33 @@ class GlobusCrawler(Crawler):
                 logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
                 # Step 2. We want to process each potential group of files.
-                gr_dict = self.grouper.group(f_names)
-                logging.debug(f"gr_dict: {gr_dict}")
+                # TODO: Start here. We're now receiving families that have groups associated with them.
+                families = self.grouper.group(f_names)
+                # logging.debug(f"gr_dict: {gr_dict}")
 
                 # Step 3. For all parsers...
-                for parser in gr_dict:
-                    logging.debug(f"Parser: {parser}")
+                for family in families:
 
-                    # Cast generator as list for debugging.
-                    gr_list = list(gr_dict[parser])
+                    groups = families[family]["groups"]
+                    for group in groups:
+                        parser = groups[group]["parser"]
+                        logging.debug(f"Parser: {parser}")
 
-                    # Step 4. For each group within a parser
-                    for gr in gr_list:
+                        gr_id = group
+                        file_list = groups[group]["files"]
+
+
+
+                        # Step 4. For each group within a parser
+                        # for gr in gr_list:
 
                         logging.debug("IN GROUP-BY-PARSER LOOP...")
-                        logging.debug(f"Group Tuple: {gr}")
+                        logging.debug(f"Group Tuple: {group}")
 
-                        gr_id = str(self.gen_group_id())
+                        # gr_id = str(self.gen_group_id())
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
 
-                        file_list = list(gr)
+                        # file_list = list(gr)
 
                         group_info["files"] = file_list
 
