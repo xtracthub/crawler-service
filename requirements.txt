@@ -13,5 +13,4 @@ flask
 flask_api
 flask_wtf
 requests
-itertools
 networkx
