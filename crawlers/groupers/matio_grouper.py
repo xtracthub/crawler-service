@@ -2,7 +2,6 @@
 from materials_io.utils.interface import get_parser, get_available_parsers
 from uuid import uuid4
 import itertools
-import matplotlib.pyplot as plt
 
 
 import networkx as nx
