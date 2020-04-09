@@ -139,8 +139,6 @@ class GlobusCrawler(Crawler):
                 raise ex
         return transfer
 
-    # TODO: Live crawl tracking failing bc this never joins.
-    # TODO: Create a poller that terminates the worker threads.
     def launch_crawl_worker(self, transfer, worker_id):
         logging.basicConfig(format=f"%(asctime)s - %(message)s', filename='crawler_{worker_id}.log", level=logging.INFO)
 
@@ -233,9 +231,7 @@ class GlobusCrawler(Crawler):
                 logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
                 # Step 2. We want to process each potential group of files.
-                # TODO: Start here. We're now receiving families that have groups associated with them.
                 families = self.grouper.group(f_names)
-                # logging.debug(f"gr_dict: {gr_dict}")
 
                 # Step 3. For all parsers...
                 for family in families:
@@ -251,11 +247,7 @@ class GlobusCrawler(Crawler):
                         logging.debug("IN GROUP-BY-PARSER LOOP...")
                         logging.debug(f"Group Tuple: {group}")
 
-                        # gr_id = str(self.gen_group_id())
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
-
-                        # file_list = list(gr)
-
                         group_info["files"] = file_list
 
                         for f in file_list:
