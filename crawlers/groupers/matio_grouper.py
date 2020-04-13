@@ -52,11 +52,6 @@ class MatIOGrouper:
 
         # So at this point, conn_comps is all files that must travel together.
         return conn_comps
-        # plt.subplot(121)
-        # print("Drawing plot!")
-        # nx.draw(gr, with_labels=False, font_weight="bold")
-        #
-        # plt.show()
 
     def pack_groups(self, conn_comps, file_groups_map, group_files_map, strategy='minimum'):
         """ Input dict of all MatIO groups,
@@ -126,5 +121,4 @@ class MatIOGrouper:
 
         print(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
-        # print(families)
         return families

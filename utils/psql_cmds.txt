@@ -65,3 +65,10 @@ CREATE TABLE group_metadata (
 ALTER TABLE group_metadata_2
   ADD COLUMN family_id VARCHAR(40) NOT NULL DEFAULT 'NA';
 
+ALTER TABLE group_metadata_2
+   ADD COLUMN crawl_start BIGINT,
+   ADD COLUMN crawl_end BIGINT;
+
+ALTER TABLE group_metadata_2
+   ADD COLUMN group_start,
+   ADD COLUMN group_end;

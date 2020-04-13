@@ -145,6 +145,7 @@ class GlobusCrawler(Crawler):
         self.worker_status_dict[worker_id] = "STARTING"
 
         while True:
+            t_start = time.time()
             all_file_mdata = {}  # Holds all metadata for a given Globus directory.
 
             # If so, then we want the worker to return.
@@ -231,7 +232,9 @@ class GlobusCrawler(Crawler):
                 logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
                 # Step 2. We want to process each potential group of files.
+                group_start_t = time.time()
                 families = self.grouper.group(f_names)
+                group_end_t = time.time()
 
                 # Step 3. For all parsers...
                 for family in families:
@@ -266,9 +269,10 @@ class GlobusCrawler(Crawler):
                             logging.error("Continuing!")
 
                         else:
+                            t_end = time.time()
                             # TODO: Occasional pg char issue -- should fix.
-                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner, family_id) " \
-                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}')"
+                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end) " \
+                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t})"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
