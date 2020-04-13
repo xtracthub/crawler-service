@@ -19,7 +19,6 @@ for group in groups:
         G.add_edge(*edge)  # '*' to unpack the tuple.
 
 
-
 plt.subplot(121)
 nx.draw(G, with_labels=True, font_weight="bold")
 

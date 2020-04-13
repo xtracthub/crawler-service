@@ -222,12 +222,14 @@ class GlobusCrawler(Crawler):
                         logging.debug(f"Metadata for full path: {entry}")
                         all_file_mdata[full_path] = {"physical": {'size': entry['size'],
                                                               "extension": extension, "path_type": "globus"}}
+
+                        print(full_path)
+                        print(entry['size'])
+
+
                     elif entry['type'] == 'dir':
                         full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
-
-                    else:
-                        raise Exception("Fucking hell")
 
                 logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
@@ -237,9 +239,20 @@ class GlobusCrawler(Crawler):
                 group_end_t = time.time()
 
                 # Step 3. For all parsers...
+                # print(families)
+                # exit()
                 for family in families:
 
+                    print(f"Processing family: {family}")
+
+                    tracked_files = set()
+                    num_file_count = 0
+                    num_bytes_count = 0
+
                     groups = families[family]["groups"]
+
+                    print(groups)
+                    # exit()
                     for group in groups:
                         parser = groups[group]["parser"]
                         logging.debug(f"Parser: {parser}")
@@ -253,8 +266,19 @@ class GlobusCrawler(Crawler):
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
                         group_info["files"] = file_list
 
+                        print(len(file_list))
                         for f in file_list:
+                            print(f)
                             group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
+
+                            if f not in tracked_files:
+                                print(f"Found new file: {f}")
+                                tracked_files.add(f)
+                                num_file_count += 1
+                                num_bytes_count += all_file_mdata[f]["physical"]["size"]
+
+                            else:
+                                print(f"{f} already accounted-for!")
 
                         logging.info(group_info)
                         cur = self.conn.cursor()
@@ -277,8 +301,15 @@ class GlobusCrawler(Crawler):
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
                             cur.execute(query)
-                            self.conn.commit()
+                            # self.conn.commit()
                             self.add_group_to_db(str(group_info["group_id"]), len(group_info['files']))
+
+                    # Update familes table here.
+                    fam_cur = self.conn.cursor()
+                    fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
+                    ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
+                    fam_cur.execute(fam_update_q)
+                    self.conn.commit()
 
             except TransferAPIError as e:
                 logging.error("Problem directory {}".format(cur_dir))

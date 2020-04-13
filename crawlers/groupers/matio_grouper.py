@@ -2,6 +2,7 @@
 from materials_io.utils.interface import get_parser, get_available_parsers
 from uuid import uuid4
 import itertools
+import logging
 
 
 import networkx as nx
@@ -55,6 +56,9 @@ class MatIOGrouper:
         conn_comps = sorted(nx.connected_components(gr), key=len, reverse=True)
         print(f"Type of conn_comps: {type(conn_comps)}")
 
+        # print(conn_comps)
+        # exit()
+
         ### DEBUG
 
         # for item in conn_comps:
@@ -85,18 +89,28 @@ class MatIOGrouper:
 
         families = {}
         for comp in conn_comps:
+
+            # print(len(conn_comps))
+
             family_uuid = str(uuid4())
 
-            for filename in comp:
-                # print(f"Filename: {filename}")
-                gr_ids = file_groups_map[filename]
-                # print(f"Group IDs: {gr_ids}")
+            # Create a new family with a fresh UUID.
+            families[family_uuid] = {"files": [], "groups": {}}
 
-                families[family_uuid] = {"groups": {}}
+            # Note here that every filename in the comp is associated with a single family id.
+            for filename in comp:
+
+                # TODO: these should be all of the groups containing a given file.
+                gr_ids = file_groups_map[filename]
+                logging.debug(f"All groups containing file {filename}: {gr_ids}")
+
+                # Add to the cumulative list of unique files across all groups in a family.
+                families[family_uuid]["files"].append(filename)
 
                 for gr_id in gr_ids:
-                    families[family_uuid]["groups"][gr_id] = group_files_map[gr_id]
 
+                    # print(f"ASSOCIATED FILES: {group_files_map[gr_id]}")
+                    families[family_uuid]["groups"][gr_id] = group_files_map[gr_id]
         return families
 
     def group(self, file_ls):
@@ -148,14 +162,13 @@ class MatIOGrouper:
 
                 if len(gr) > self.hard_max_files:
 
-                    print("HOW THE FUCK DID WE GET HERE????")
+                    print("HOW in Sam Heck DID WE GET HERE????")
 
         # Get the connected components of the graph.
         conn_comps = self.make_file_graph(group_coll)
 
         # Use the connected components to generate a family for each connected component.
         families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
-
         print(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
         return families
