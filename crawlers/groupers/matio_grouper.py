@@ -12,7 +12,7 @@ class MatIOGrouper:
     def __init__(self):
         self.name = "matio"  # TODO: Add to parent class.
         self.soft_max_files = 50
-        self.hard_max_files = 1000
+        self.hard_max_files = 10
 
     def make_file_graph(self, group_dict):
 
@@ -30,7 +30,7 @@ class MatIOGrouper:
                 if len(item) > 1:
                     # print(item)
                     num_g_1 += 1
-                    if len(item) >= 1000:
+                    if len(item) >= self.hard_max_files:
                         print("TOO BIG")
                         print(len(item))
                         exit()
@@ -146,7 +146,7 @@ class MatIOGrouper:
                     group_files_map[group_id]["files"].append(filename)
                 group_coll[parser].append(gr)
 
-                if len(gr) > 1000:
+                if len(gr) > self.hard_max_files:
 
                     print("HOW THE FUCK DID WE GET HERE????")
 
