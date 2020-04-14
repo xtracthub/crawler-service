@@ -62,7 +62,6 @@ class GlobusCrawler(Crawler):
             raise KeyError("Only logging levels '-d / debug' and '-i / info' are supported.")
 
     def add_group_to_db(self, group_id, num_files):
-        # TODO try/catch the postgres things.
         cur = self.conn.cursor()
 
         now_time = datetime.now()
@@ -74,10 +73,14 @@ class GlobusCrawler(Crawler):
         logging.info(f"Groups query {query1}")
         logging.info(f"Status query {query2}")
 
-        cur.execute(query1)
-        cur.execute(query2)
+        try:
+            cur.execute(query1)
+            cur.execute(query2)
 
-        # TODO: Don't need to commit every dang single time.
+        except psycopg2.OperationalError as e:
+            logging.error(e)
+            raise psycopg2.OperationalError(e)
+
         return self.conn.commit()
 
     def db_crawl_end(self):
@@ -181,6 +184,7 @@ class GlobusCrawler(Crawler):
                 self.worker_status_dict[worker_id] = "ACTIVE"
                 logging.info(f"Worker ID: {worker_id} promoted to ACTIVE.")
 
+            dir_contents = []
             try:
                 while True:
                     try:
@@ -220,30 +224,24 @@ class GlobusCrawler(Crawler):
                         extension = self.get_extension(entry["name"])
 
                         logging.debug(f"Metadata for full path: {entry}")
-                        all_file_mdata[full_path] = {"physical": {'size': entry['size'],
-                                                              "extension": extension, "path_type": "globus"}}
+                        all_file_mdata[full_path] = {"physical": {"size": entry["size"],
+                                                                  "extension": extension, "path_type": "globus"}}
 
-                        print(full_path)
-                        print(entry['size'])
-
-
-                    elif entry['type'] == 'dir':
+                    elif entry["type"] == "dir":
                         full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
 
                 logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
-                # Step 2. We want to process each potential group of files.
+                #  We want to process each potential group of files.
                 group_start_t = time.time()
                 families = self.grouper.group(f_names)
                 group_end_t = time.time()
 
-                # Step 3. For all parsers...
-                # print(families)
-                # exit()
+                # For all families
                 for family in families:
 
-                    print(f"Processing family: {family}")
+                    logging.debug(f"Preparing family for DB ingest: {family}")
 
                     tracked_files = set()
                     num_file_count = 0
@@ -251,8 +249,7 @@ class GlobusCrawler(Crawler):
 
                     groups = families[family]["groups"]
 
-                    print(groups)
-                    # exit()
+                    # For all groups in the family
                     for group in groups:
                         parser = groups[group]["parser"]
                         logging.debug(f"Parser: {parser}")
@@ -266,7 +263,7 @@ class GlobusCrawler(Crawler):
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
                         group_info["files"] = file_list
 
-                        print(len(file_list))
+                        logging.debug(f"Processing number of files: {len(file_list)}")
                         for f in file_list:
                             print(f)
                             group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
@@ -294,9 +291,12 @@ class GlobusCrawler(Crawler):
 
                         else:
                             t_end = time.time()
-                            # TODO: Occasional pg char issue -- should fix.
-                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end) " \
-                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t})"
+
+                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, " \
+                                f"owner, family_id, crawl_start, crawl_end, group_start, group_end) " \
+                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
+                                f"'{files}', '{parsers}', " \
+                                f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t})"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1

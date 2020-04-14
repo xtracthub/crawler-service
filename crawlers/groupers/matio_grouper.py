@@ -20,27 +20,19 @@ class MatIOGrouper:
         # for group in group_dict:
 
         num_g_1 = 0
-        print("Assembling graph")
+        logging.debug("Assembling graph")
         gr = nx.Graph()
-        too_long_comps = []
         groups = []
         for parser in group_dict:
-            print(parser)
             for item in group_dict[parser]:
-                # print(item)
                 if len(item) > 1:
-                    # print(item)
                     num_g_1 += 1
-                    if len(item) >= self.hard_max_files:
-                        print("TOO BIG")
-                        print(len(item))
-                        exit()
-                    print(f"Number of groups with more than 1 element: {num_g_1}")
-                    print(f"Len of big group: {len(item)}")
+                    logging.debug(f"Number of groups with more than 1 element: {num_g_1}")
+                    logging.debug(f"Len of largest group: {len(item)}")
                 groups.append(item)
 
-        print("Generating nodes and edges... ")
-        print(f"Number of groups: {len(groups)}")
+        logging.debug("Generating nodes and edges... ")
+        logging.debug(f"Number of groups: {len(groups)}")
         for group in groups:
 
             # Add nodes
@@ -52,30 +44,13 @@ class MatIOGrouper:
             for edge in all_edges:
                 gr.add_edge(*edge)  # '*' to unpack the tuple.
 
-        print("Generating number of connected components...")
+        logging.debug("Generating number of connected components...")
         conn_comps = sorted(nx.connected_components(gr), key=len, reverse=True)
-        print(f"Type of conn_comps: {type(conn_comps)}")
 
-        # print(conn_comps)
-        # exit()
-
-        ### DEBUG
-
-        # for item in conn_comps:
-            # print(type(item))
-
-        ###
-
-        # for item in too_long_comps:
-        #     conn_comps.append(set(item))
-        # conn_comps.append(set(too_long_comps))
-        print(f"Number of connected components: {len(conn_comps)}")
-
-        print("Now counting nodes and edges...")
-
-        # exit()
-        print(f"Number of nodes: {gr.number_of_nodes()}")
-        print(f"Number of edges: {gr.number_of_edges()}")
+        logging.debug(f"Number of connected components: {len(conn_comps)}")
+        logging.debug("Now counting nodes and edges...")
+        logging.debug(f"Number of nodes: {gr.number_of_nodes()}")
+        logging.debug(f"Number of edges: {gr.number_of_edges()}")
 
         # So at this point, conn_comps is all files that must travel together.
         return conn_comps
@@ -89,8 +64,6 @@ class MatIOGrouper:
 
         families = {}
         for comp in conn_comps:
-
-            # print(len(conn_comps))
 
             family_uuid = str(uuid4())
 
@@ -127,7 +100,6 @@ class MatIOGrouper:
         group_coll = {}
 
         for parser in parsers:
-            print(f"Processing parser: {parser}")
 
             if parser in ['noop', 'generic']:
                 continue
@@ -136,39 +108,30 @@ class MatIOGrouper:
             group = p.group(file_ls)
 
             gr_list = list(group)
-
-            # group_coll[parser] = gr_list
             group_coll[parser] = []
 
             for gr in gr_list:
-
-                # TODO: Odd assumption to be making. Should allow groups to be arbitrarily large.
                 if len(gr) > self.hard_max_files:
-                    print("The group was too dang big. ")
-                    print(len(gr))
+                    logging.debug(f"Proposed group too large ({len(gr)}). Skipping...")
                     continue
 
                 # Assign a group_id for each group.
                 group_id = str(uuid4())
+
                 for filename in gr:
                     # print(gr_list)
                     if filename not in file_groups_map:
                         file_groups_map[filename] = [group_id]
                     file_groups_map[filename].append(group_id)
-
                     group_files_map[group_id] = {"files": [], "parser": parser}
                     group_files_map[group_id]["files"].append(filename)
                 group_coll[parser].append(gr)
-
-                if len(gr) > self.hard_max_files:
-
-                    print("HOW in Sam Heck DID WE GET HERE????")
 
         # Get the connected components of the graph.
         conn_comps = self.make_file_graph(group_coll)
 
         # Use the connected components to generate a family for each connected component.
         families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
-        print(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
+        logging.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
         return families
