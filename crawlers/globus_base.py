@@ -82,7 +82,7 @@ class GlobusCrawler(Crawler):
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
-        query = f"UPDATE crawls SET status='complete' WHERE crawl_id='{self.crawl_id}';"
+        query = f"UPDATE crawls SET status='complete', ended_on='{datetime.now()}' WHERE crawl_id='{self.crawl_id}';"
         cur.execute(query)
 
         return self.conn.commit()
