@@ -82,7 +82,7 @@ class GlobusCrawler(Crawler):
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
-        query = f"UPDATE crawls SET status='complete', ended_on='{datetime.now()}' WHERE crawl_id='{self.crawl_id}';"
+        query = f"UPDATE crawls SET status='complete', ended_on='{datetime.utcnow()}' WHERE crawl_id='{self.crawl_id}';"
         cur.execute(query)
 
         return self.conn.commit()
@@ -329,7 +329,7 @@ class GlobusCrawler(Crawler):
         self.to_crawl.put(self.path)
 
         cur = self.conn.cursor()
-        now_time = datetime.now()
+        now_time = datetime.utcnow()
         crawl_update = f"INSERT INTO crawls (crawl_id, started_on) VALUES " \
             f"('{self.crawl_id}', '{now_time}');"
         cur.execute(crawl_update)
