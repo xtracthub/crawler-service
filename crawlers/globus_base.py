@@ -64,7 +64,7 @@ class GlobusCrawler(Crawler):
     def add_group_to_db(self, group_id, num_files):
         cur = self.conn.cursor()
 
-        now_time = datetime.now()
+        now_time = datetime.utcnow()
         query1 = f"INSERT INTO groups (group_id, grouper, num_files, created_on, crawl_id) VALUES " \
             f"('{group_id}', '{self.grouper.name}', {num_files}, '{now_time}', '{self.crawl_id}');"
 
