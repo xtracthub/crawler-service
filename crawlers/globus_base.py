@@ -280,7 +280,7 @@ class GlobusCrawler(Crawler):
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
                             cur.execute(query)
-                            
+
                     # Update familes table here.
                     fam_cur = self.conn.cursor()
                     fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
