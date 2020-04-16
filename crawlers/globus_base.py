@@ -61,27 +61,6 @@ class GlobusCrawler(Crawler):
         else:
             raise KeyError("Only logging levels '-d / debug' and '-i / info' are supported.")
 
-    def add_group_to_db(self, group_id, num_files):
-        cur = self.conn.cursor()
-
-        now_time = datetime.utcnow()
-        query1 = f"INSERT INTO groups (group_id, grouper, num_files, created_on, crawl_id) VALUES " \
-            f"('{group_id}', '{self.grouper.name}', {num_files}, '{now_time}', '{self.crawl_id}');"
-
-        # query2 = f"INSERT INTO group_status (group_id, status) VALUES ('{group_id}', 'crawled');"
-
-        logging.info(f"Groups query {query1}")
-        # logging.info(f"Status query {query2}")
-
-        try:
-            cur.execute(query1)
-            # cur.execute(query2)
-
-        except psycopg2.OperationalError as e:
-            logging.error(e)
-            raise psycopg2.OperationalError(e)
-
-        return self.conn.commit()
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -292,18 +271,16 @@ class GlobusCrawler(Crawler):
                         else:
                             t_end = time.time()
 
-                            query = f"INSERT INTO group_metadata_2 (group_id, metadata, files, parsers, " \
-                                f"owner, family_id, crawl_start, crawl_end, group_start, group_end) " \
-                                f"VALUES ('{gr_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
+                            query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
+                                f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
+                                f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
                                 f"'{files}', '{parsers}', " \
-                                f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t})"
+                                f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
 
                             logging.info(f"Group Metadata query: {query}")
                             self.group_count += 1
                             cur.execute(query)
-                            # self.conn.commit()
-                            self.add_group_to_db(str(group_info["group_id"]), len(group_info['files']))
-
+                            
                     # Update familes table here.
                     fam_cur = self.conn.cursor()
                     fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
