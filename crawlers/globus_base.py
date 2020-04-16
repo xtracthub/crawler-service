@@ -68,14 +68,14 @@ class GlobusCrawler(Crawler):
         query1 = f"INSERT INTO groups (group_id, grouper, num_files, created_on, crawl_id) VALUES " \
             f"('{group_id}', '{self.grouper.name}', {num_files}, '{now_time}', '{self.crawl_id}');"
 
-        query2 = f"INSERT INTO group_status (group_id, status) VALUES ('{group_id}', 'crawled');"
+        # query2 = f"INSERT INTO group_status (group_id, status) VALUES ('{group_id}', 'crawled');"
 
         logging.info(f"Groups query {query1}")
-        logging.info(f"Status query {query2}")
+        # logging.info(f"Status query {query2}")
 
         try:
             cur.execute(query1)
-            cur.execute(query2)
+            # cur.execute(query2)
 
         except psycopg2.OperationalError as e:
             logging.error(e)
