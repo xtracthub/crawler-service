@@ -271,15 +271,20 @@ class GlobusCrawler(Crawler):
                         else:
                             t_end = time.time()
 
-                            query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
-                                f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
-                                f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
-                                f"'{files}', '{parsers}', " \
-                                f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
+                            try:
+                                query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
+                                    f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
+                                    f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
+                                    f"'{files}', '{parsers}', " \
+                                    f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
 
-                            logging.info(f"Group Metadata query: {query}")
-                            self.group_count += 1
-                            cur.execute(query)
+                                logging.info(f"Group Metadata query: {query}")
+                                self.group_count += 1
+                                cur.execute(query)
+                            except:
+                                # TODO: SET TO FAILED.
+                                print("SET TO FAILED")
+                                pass
 
                     # Update familes table here.
                     fam_cur = self.conn.cursor()
