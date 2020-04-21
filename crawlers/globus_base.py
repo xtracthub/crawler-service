@@ -281,8 +281,9 @@ class GlobusCrawler(Crawler):
                                 logging.info(f"Group Metadata query: {query}")
                                 self.group_count += 1
                                 cur.execute(query)
-                            except:
+                            except Exception as e:
                                 # TODO: SET TO FAILED.
+                                print(e)
                                 print("SET TO FAILED")
                                 pass
 
