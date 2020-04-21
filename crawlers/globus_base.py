@@ -285,14 +285,19 @@ class GlobusCrawler(Crawler):
                                 # TODO: SET TO FAILED.
                                 print(e)
                                 print("SET TO FAILED")
-                                pass
+                                continue
 
-                    # Update familes table here.
-                    fam_cur = self.conn.cursor()
-                    fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
-                    ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
-                    fam_cur.execute(fam_update_q)
-                    self.conn.commit()
+                    try:
+                        # Update familes table here.
+                        fam_cur = self.conn.cursor()
+                        fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
+                        ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
+                        fam_cur.execute(fam_update_q)
+                        self.conn.commit()
+                    except Exception as e:
+                        print(e)
+                        print("SET AS FAILED 2.")
+                        pass
 
             except TransferAPIError as e:
                 logging.error("Problem directory {}".format(cur_dir))
