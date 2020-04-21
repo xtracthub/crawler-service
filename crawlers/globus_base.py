@@ -244,17 +244,17 @@ class GlobusCrawler(Crawler):
 
                         logging.debug(f"Processing number of files: {len(file_list)}")
                         for f in file_list:
-                            print(f)
+                            # print(f)
                             group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
 
                             if f not in tracked_files:
-                                print(f"Found new file: {f}")
+                                # print(f"Found new file: {f}")
                                 tracked_files.add(f)
                                 num_file_count += 1
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
 
-                            else:
-                                print(f"{f} already accounted-for!")
+                            # else:
+                            #     print(f"{f} already accounted-for!")
 
                         logging.info(group_info)
                         cur = self.conn.cursor()
