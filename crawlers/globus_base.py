@@ -297,7 +297,7 @@ class GlobusCrawler(Crawler):
                     except Exception as e:
                         print(e)
                         print("SET AS FAILED 2.")
-                        pass
+                        continue
 
             except TransferAPIError as e:
                 logging.error("Problem directory {}".format(cur_dir))
