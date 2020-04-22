@@ -21,7 +21,7 @@ def crawl_launch(crawler, tc):
 @application.route('/')
 def hello():
     st = status.HTTP_200_OK
-    return f"Welcome to the Xtract crawler! \n Status: {str(st)}", st
+    return f"Welcome to the Xtract crawler! \n Status: {str(st)}", st 
 
 
 @application.route('/crawl', methods=['POST'])
