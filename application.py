@@ -14,6 +14,9 @@ application = Flask(__name__)
 # TODO:     - Have the main service get all status checks.
 
 
+crawler_dict = {}
+
+
 def crawl_launch(crawler, tc):
     crawler.crawl(tc)
 
@@ -43,7 +46,28 @@ def crawl_repo():
     crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
     crawl_thread.start()
 
+    crawler_dict[crawl_id] = crawler
+
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
+
+
+@application.route('/get_status', methods=['GET'])
+def get_status():
+
+    r = request.json
+    crawl_id = r['crawl_id']
+
+    if crawl_id in crawler_dict:
+
+        files_crawled = crawler_dict[crawl_id].count_files_crawled
+        bytes_crawled = crawler_dict[crawl_id].count_bytes_crawled
+        groups_crawled = crawler_dict[crawl_id].count_groups_crawled
+
+        return {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
+                'bytes_crawled': bytes_crawled, 'group_crawled': groups_crawled}
+
+    else:
+        return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
 
 if __name__ == '__main__':

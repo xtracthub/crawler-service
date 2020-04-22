@@ -12,7 +12,7 @@ from datetime import datetime
 from utils.pg_utils import pg_conn, pg_list
 import psycopg2
 
-from queue import Queue 
+from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
 from globus_sdk import (TransferClient, AccessTokenAuthorizer, ConfidentialAppAuthClient)
 
@@ -38,6 +38,10 @@ class GlobusCrawler(Crawler):
         self.worker_status_dict = {}
         self.idle_worker_count = 0
         self.max_crawl_threads = 5
+
+        self.count_groups_crawled = 0
+        self.count_files_crawled = 0
+        self.count_bytes_crawled = 0
 
         self.images = []
         self.matio = []
@@ -230,6 +234,8 @@ class GlobusCrawler(Crawler):
 
                     # For all groups in the family
                     for group in groups:
+
+                        self.count_groups_crawled += 1
                         parser = groups[group]["parser"]
                         logging.debug(f"Parser: {parser}")
 
@@ -251,10 +257,9 @@ class GlobusCrawler(Crawler):
                                 # print(f"Found new file: {f}")
                                 tracked_files.add(f)
                                 num_file_count += 1
+                                self.count_files_crawled += 1
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
-
-                            # else:
-                            #     print(f"{f} already accounted-for!")
+                                self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
 
                         logging.info(group_info)
                         cur = self.conn.cursor()
@@ -282,21 +287,31 @@ class GlobusCrawler(Crawler):
                                 self.group_count += 1
                                 cur.execute(query)
                             except Exception as e:
+                                print(group_info['files'])
                                 # TODO: SET TO FAILED.
+                                # TODO: Check to see that this rollback actually works.
+                                self.conn.rollback()
                                 print(e)
                                 print("SET TO FAILED")
+                                self.conn.close()
+                                self.conn = pg_conn()
                                 continue
 
+
                     try:
+                        # TODO: I think the family needs to fail or something if one/more of its groups failed?
                         # Update familes table here.
                         fam_cur = self.conn.cursor()
                         fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
                         ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
                         fam_cur.execute(fam_update_q)
                         self.conn.commit()
-                    except Exception as e:
+                    except psycopg2.DatabaseError as e:
+                        self.conn.rollback()
                         print(e)
                         print("SET AS FAILED 2.")
+                        self.conn.close()
+                        self.conn = pg_conn()
                         continue
 
             except TransferAPIError as e:
