@@ -12,7 +12,7 @@ from datetime import datetime
 from utils.pg_utils import pg_conn, pg_list
 import psycopg2
 
-from queue import Queue
+from queue import Queue 
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
 from globus_sdk import (TransferClient, AccessTokenAuthorizer, ConfidentialAppAuthClient)
 
