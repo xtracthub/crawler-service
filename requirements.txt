@@ -5,7 +5,7 @@ psycopg2-binary
 dfttopif
 Pillow
 # numpy
-#  pymatgen
+# pymatgen
 git+https://github.com/materials-data-facility/MaterialsIO.git
 hyperspy
 tableschema
