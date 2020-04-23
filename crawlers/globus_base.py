@@ -250,7 +250,7 @@ class GlobusCrawler(Crawler):
 
                         logging.debug(f"Processing number of files: {len(file_list)}")
                         for f in file_list:
-                            # print(f)
+
                             group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
 
                             if f not in tracked_files:
