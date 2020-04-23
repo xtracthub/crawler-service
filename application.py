@@ -57,6 +57,9 @@ def get_status():
     r = request.json
     crawl_id = r['crawl_id']
 
+    print(f"Crawl Dict: {crawler_dict}")
+    print(f"Crawl ID: {crawl_id}")
+
     if crawl_id in crawler_dict:
 
         files_crawled = crawler_dict[crawl_id].count_files_crawled
