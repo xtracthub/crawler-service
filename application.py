@@ -46,7 +46,7 @@ def crawl_repo():
     crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
     crawl_thread.start()
 
-    crawler_dict[crawl_id] = crawler
+    crawler_dict[str(crawl_id)] = crawler
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
