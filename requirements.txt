@@ -12,5 +12,5 @@ flask_api
 flask_wtf
 requests
 networkx
-numpy
-pymatgen
+# numpy
+# pymatgen
