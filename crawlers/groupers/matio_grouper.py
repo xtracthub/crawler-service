@@ -51,6 +51,7 @@ class MatIOGrouper:
         logging.debug("Now counting nodes and edges...")
         logging.debug(f"Number of nodes: {gr.number_of_nodes()}")
         logging.debug(f"Number of edges: {gr.number_of_edges()}")
+        gr.clear()
 
         # So at this point, conn_comps is all files that must travel together.
         return conn_comps
