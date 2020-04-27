@@ -36,7 +36,7 @@ class GlobusCrawler(Crawler):
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
         self.idle_worker_count = 0
-        self.max_crawl_threads = 20
+        self.max_crawl_threads = 1
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
@@ -137,14 +137,14 @@ class GlobusCrawler(Crawler):
             if self.to_crawl.empty():
                 # This worker sees an empty queue, AND IF NOT ALREADY "IDLE", should become "IDLE"
                 if self.worker_status_dict[worker_id] is not "IDLE":
-                    logging.info(f"Worker ID: {worker_id} demoted to IDLE.")
+                    print(f"Worker ID: {worker_id} demoted to IDLE.")
                     self.worker_status_dict[worker_id] = "IDLE"
                     self.idle_worker_count += 1
 
                 # If to_crawl is empty, we want to check and see if other crawl_workers idle AND not in 'starting state'
                 # If all of the workers are idle AND state != 'STARTING'.
                 if self.idle_worker_count >= self.max_crawl_threads:
-                    logging.info(f"Worker ID: {worker_id} is terminating.")
+                    print(f"Worker ID: {worker_id} is terminating.")
                     return "CRAWL--COMPLETE"  # TODO: Behavior for collapsing a thread w/ no real return val?
                 continue
 
