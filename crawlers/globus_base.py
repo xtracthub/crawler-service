@@ -32,12 +32,12 @@ class GlobusCrawler(Crawler):
         self.auth_token = auth_token
         self.conn = pg_conn()
         self.crawl_id = crawl_id
-        self.crawl_hb = 12
+        self.crawl_hb = 5
 
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
         self.idle_worker_count = 0
-        self.max_crawl_threads = 10
+        self.max_crawl_threads = 4
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
