@@ -32,7 +32,7 @@ class GlobusCrawler(Crawler):
         self.auth_token = auth_token
         self.conn = pg_conn()
         self.crawl_id = crawl_id
-        self.crawl_hb = 10
+        self.crawl_hb = 12
 
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
@@ -177,11 +177,13 @@ class GlobusCrawler(Crawler):
                     except GlobusTimeoutError as e:
                         logging.error("Globus Timeout Error -- retrying")
                         logging.info(e)
+                        print(e)
                         pass
 
                     except Exception as e:
 
                         logging.error(str(e))
+                        print(e)
                         if '502' in str(e)[0:4]:
                             logging.error("Directory too large...")
                             restart_loop = True
@@ -318,6 +320,7 @@ class GlobusCrawler(Crawler):
                 logging.error("Problem directory {}".format(cur_dir))
                 logging.error("Transfer client received the following error:")
                 logging.error(e)
+                print(e)
                 self.failed_dirs["failed"].append(cur_dir)
                 continue
 
