@@ -69,8 +69,7 @@ class GlobusCrawler(Crawler):
 
         print("Launching occasional commit thread")
         commit_thr = threading.Thread(target=self.occasional_commit, args=())
-        commit_thr.start()
-
+        # commit_thr.start()
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -299,7 +298,7 @@ class GlobusCrawler(Crawler):
 
                                 logging.info(f"Group Metadata query: {query}")
                                 self.group_count += 1
-                                cur.execute(query)
+                                # cur.execute(query)  # TODO: 1
                             except Exception as e:
                                 print(group_info['files'])
                                 # TODO: SET TO FAILED.
@@ -317,7 +316,7 @@ class GlobusCrawler(Crawler):
                         fam_cur = self.conn.cursor()
                         fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
                         ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
-                        fam_cur.execute(fam_update_q)
+                        # fam_cur.execute(fam_update_q) # TODO: 2
                         # self.conn.commit()
                     except psycopg2.DatabaseError as e:
                         self.conn.rollback()
