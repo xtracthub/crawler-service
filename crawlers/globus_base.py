@@ -36,7 +36,7 @@ class GlobusCrawler(Crawler):
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
         self.idle_worker_count = 0
-        self.max_crawl_threads = 1
+        self.max_crawl_threads = 5
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
