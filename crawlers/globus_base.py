@@ -41,11 +41,14 @@ class GlobusCrawler(Crawler):
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
         self.count_bytes_crawled = 0
+        self.commit_gap = 10
 
         self.images = []
         self.matio = []
         self.keyword = []
         self.jsonxml = []
+
+        self.insert_files_queue = Queue()
 
         if grouper_name == 'matio':
             self.grouper = matio_grouper.MatIOGrouper()
@@ -64,6 +67,10 @@ class GlobusCrawler(Crawler):
         else:
             raise KeyError("Only logging levels '-d / debug' and '-i / info' are supported.")
 
+        print("Launching occasional commit thread")
+        commit_thr = threading.Thread(target=self.occasional_commit, args=())
+        commit_thr.start()
+
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -71,6 +78,12 @@ class GlobusCrawler(Crawler):
         cur.execute(query)
 
         return self.conn.commit()
+
+    def occasional_commit(self):
+        while True:
+            time.sleep(self.commit_gap)
+            print(f"Committing after {self.commit_gap} seconds!")
+            self.conn.commit()
 
     def get_extension(self, filepath):
         """Returns the extension of a filepath.
@@ -290,7 +303,6 @@ class GlobusCrawler(Crawler):
                             except Exception as e:
                                 print(group_info['files'])
                                 # TODO: SET TO FAILED.
-                                # TODO: Check to see that this rollback actually works.
                                 self.conn.rollback()
                                 print(e)
                                 print("SET TO FAILED")
@@ -306,7 +318,7 @@ class GlobusCrawler(Crawler):
                         fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
                         ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
                         fam_cur.execute(fam_update_q)
-                        self.conn.commit()
+                        # self.conn.commit()
                     except psycopg2.DatabaseError as e:
                         self.conn.rollback()
                         print(e)
