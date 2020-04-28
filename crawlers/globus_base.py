@@ -20,10 +20,25 @@ from .groupers import matio_grouper
 
 from .base import Crawler
 
+max_crawl_threads = 2
+
+overall_logger = logging.getLogger(__name__)
+overall_logger.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler(f"crawl_main.log")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+overall_logger.addHandler(fh)
+overall_logger.propagate = False
+
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.ERROR)
+overall_logger.addHandler(stream_handler)
+
 
 class GlobusCrawler(Crawler):
 
-    def __init__(self, eid, path, crawl_id, trans_token, auth_token, grouper_name=None, logging_level='info'):
+    def __init__(self, eid, path, crawl_id, trans_token, auth_token, grouper_name=None, logging_level='debug'):
         Crawler.__init__(self)
         self.path = path
         self.eid = eid
@@ -36,7 +51,7 @@ class GlobusCrawler(Crawler):
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
         self.idle_worker_count = 0
-        self.max_crawl_threads = 5
+        self.max_crawl_threads = max_crawl_threads
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
@@ -50,24 +65,15 @@ class GlobusCrawler(Crawler):
 
         self.insert_files_queue = Queue()
 
-        if grouper_name == 'matio':
-            self.grouper = matio_grouper.MatIOGrouper()
 
         try:
             self.token_owner = self.get_uid_from_token()
         except:  # TODO: Real auth that's not just printing.
-            logging.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
+            overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
         self.logging_level = logging_level
 
-        if self.logging_level == 'debug':
-            logging.basicConfig(format='%(asctime)s - %(message)s', filename='crawler_debug.log', level=logging.DEBUG)
-        elif self.logging_level == 'info':
-            logging.basicConfig(format='%(asctime)s - %(message)s', filename='crawler_info.log', level=logging.INFO)
-        else:
-            raise KeyError("Only logging levels '-d / debug' and '-i / info' are supported.")
-
-        print("Launching occasional commit thread")
+        logging.info("Launching occasional commit thread")
         commit_thr = threading.Thread(target=self.occasional_commit, args=())
         # commit_thr.start()
 
@@ -81,7 +87,7 @@ class GlobusCrawler(Crawler):
     def occasional_commit(self):
         while True:
             time.sleep(self.commit_gap)
-            print(f"Committing after {self.commit_gap} seconds!")
+            logging.debug(f"Committing after {self.commit_gap} seconds!")
             self.conn.commit()
 
     def get_extension(self, filepath):
@@ -110,7 +116,7 @@ class GlobusCrawler(Crawler):
         time0 = time.time()
         auth_detail = conf_app_client.oauth2_token_introspect(token)
         time1 = time.time()
-        logging.info(f"INTROSPECT TIME: {time1-time0}")
+        overall_logger.info(f"INTROSPECT TIME: {time1-time0}")
 
         uid = auth_detail['username']
 
@@ -137,9 +143,23 @@ class GlobusCrawler(Crawler):
         return transfer
 
     def launch_crawl_worker(self, transfer, worker_id):
-        logging.basicConfig(format=f"%(asctime)s - %(message)s', filename='crawler_{worker_id}.log", level=logging.INFO)
+
+        # Borrowed from here:
+        # https://stackoverflow.com/questions/6386698/how-to-write-to-a-file-using-the-logging-python-module
+        file_logger = logging.getLogger(str(worker_id))  # TODO: __name__?
+        file_logger.setLevel(logging.DEBUG)
+
+        fh = logging.FileHandler(f"cr_worker_{worker_id}-{max_crawl_threads - 1}.log")
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        file_logger.addHandler(fh)
+        file_logger.propagate = False
+
+        file_logger.warning("TESTING LOGGER")
 
         self.worker_status_dict[worker_id] = "STARTING"
+
+        grouper = matio_grouper.MatIOGrouper(logger=file_logger)
 
         while True:
             t_start = time.time()
@@ -149,15 +169,16 @@ class GlobusCrawler(Crawler):
             if self.to_crawl.empty():
                 # This worker sees an empty queue, AND IF NOT ALREADY "IDLE", should become "IDLE"
                 if self.worker_status_dict[worker_id] is not "IDLE":
-                    print(f"Worker ID: {worker_id} demoted to IDLE.")
+                    file_logger.info(f"Worker ID: {worker_id} demoted to IDLE.")
                     self.worker_status_dict[worker_id] = "IDLE"
                     self.idle_worker_count += 1
 
                 # If to_crawl is empty, we want to check and see if other crawl_workers idle AND not in 'starting state'
                 # If all of the workers are idle AND state != 'STARTING'.
                 if self.idle_worker_count >= self.max_crawl_threads:
-                    print(f"Worker ID: {worker_id} is terminating.")
+                    file_logger.info(f"Worker ID: {worker_id} is terminating.")
                     return "CRAWL--COMPLETE"  # TODO: Behavior for collapsing a thread w/ no real return val?
+                time.sleep(2)
                 continue
 
             # OTHERWISE, pluck an item from queue.
@@ -167,42 +188,48 @@ class GlobusCrawler(Crawler):
                     cur_dir = self.to_crawl.get()
                     restart_loop = False
                 except Exception as e:
-                    logging.error("Caught the following race condition exception... ignoring...")
-                    logging.error(e)
+                    file_logger.error("Caught the following race condition exception... ignoring...")
+                    file_logger.error(e)
 
                     # Go back to beginning and check queue again.
+                    time.sleep(2)
                     continue
 
             # In the case where we successfully extracted from queue AND worker not "ACTIVE", make it active.
             if self.worker_status_dict[worker_id] is not "ACTIVE":
                 self.worker_status_dict[worker_id] = "ACTIVE"
-                logging.info(f"Worker ID: {worker_id} promoted to ACTIVE.")
+                file_logger.info(f"Worker ID: {worker_id} promoted to ACTIVE.")
 
             dir_contents = []
             try:
                 while True:
                     try:
+                        t_gl_ls_start = time.time()
+                        file_logger.debug(f"Expanding directory: {cur_dir}")
                         dir_contents = transfer.operation_ls(self.eid, path=cur_dir)
+                        t_gl_ls_end = time.time()
+
+                        file_logger.info(f"Total time to do globus_ls: {t_gl_ls_end - t_gl_ls_start}")
                         break
 
                     except GlobusTimeoutError as e:
-                        logging.error("Globus Timeout Error -- retrying")
+                        file_logger.error("Globus Timeout Error -- retrying")
                         logging.info(e)
                         print(e)
                         pass
 
                     except Exception as e:
 
-                        logging.error(str(e))
+                        file_logger.error(str(e))
                         print(e)
                         if '502' in str(e)[0:4]:
-                            logging.error("Directory too large...")
+                            file_logger.error("Directory too large...")
                             restart_loop = True
                             break
 
                         logging.error(f"Caught error : {e}")
                         logging.error(f"Offending directory: {cur_dir}")
-                        time.sleep(0.25)
+                        time.sleep(0.25)  # TODO: bring back once we finish benchmarking.
 
                 if restart_loop:
                     continue
@@ -210,8 +237,6 @@ class GlobusCrawler(Crawler):
                 # Step 1. All files have own file metadata.
                 f_names = []
                 for entry in dir_contents:
-
-                    logging.debug(f"[DEBUG] Entry: {entry}")
 
                     full_path = cur_dir + "/" + entry['name']
                     if entry['type'] == 'file':
@@ -227,17 +252,17 @@ class GlobusCrawler(Crawler):
                         full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
 
-                logging.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
+                # file_logger.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
 
                 #  We want to process each potential group of files.
                 group_start_t = time.time()
-                families = self.grouper.group(f_names)
+                families = grouper.group(f_names)
                 group_end_t = time.time()
 
                 # For all families
                 for family in families:
 
-                    logging.debug(f"Preparing family for DB ingest: {family}")
+                    # logging.debug(f"Preparing family for DB ingest: {family}")
 
                     tracked_files = set()
                     num_file_count = 0
@@ -255,13 +280,13 @@ class GlobusCrawler(Crawler):
                         gr_id = group
                         file_list = groups[group]["files"]
 
-                        logging.debug("IN GROUP-BY-PARSER LOOP...")
-                        logging.debug(f"Group Tuple: {group}")
+                        # file_logger.debug("IN GROUP-BY-PARSER LOOP...")
+                        # file_logger.debug(f"Group Tuple: {group}")
 
                         group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
                         group_info["files"] = file_list
 
-                        logging.debug(f"Processing number of files: {len(file_list)}")
+                        # file_logger.debug(f"Processing number of files: {len(file_list)}")
                         for f in file_list:
 
                             group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
@@ -274,7 +299,7 @@ class GlobusCrawler(Crawler):
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
                                 self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
 
-                        logging.info(group_info)
+                        # file_logger.debug(group_info)
                         cur = self.conn.cursor()
 
                         try:
@@ -282,9 +307,9 @@ class GlobusCrawler(Crawler):
                             parsers = pg_list(['crawler'])
 
                         except ValueError as e:
-                            logging.error(f"Caught ValueError {e}")
+                            file_logger.error(f"Caught ValueError {e}")
                             self.failed_groups["illegal_char"].append((group_info["files"], ['crawler']))
-                            logging.error("Continuing!")
+                            file_logger.error("Continuing!")
 
                         else:
                             t_end = time.time()
@@ -327,17 +352,20 @@ class GlobusCrawler(Crawler):
                         continue
 
             except TransferAPIError as e:
-                logging.error("Problem directory {}".format(cur_dir))
-                logging.error("Transfer client received the following error:")
-                logging.error(e)
+                file_logger.error("Problem directory {}".format(cur_dir))
+                file_logger.error("Transfer client received the following error:")
+                file_logger.error(e)
                 print(e)
                 self.failed_dirs["failed"].append(cur_dir)
                 continue
+            t_while_iter = time.time()
+            # print(f"Total While loop time: {t_while_iter - t_start}")
 
     def crawl(self, transfer):
         dir_name = "./xtract_metadata"
         os.makedirs(dir_name, exist_ok=True)
 
+        t_start = time.time()
         self.failed_dirs = {"failed": []}
         self.failed_groups = {"illegal_char": []}
 
@@ -360,8 +388,12 @@ class GlobusCrawler(Crawler):
         for t in list_threads:
             t.join()
 
-        logging.info(f"\n***FINAL groups processed for crawl_id {self.crawl_id}: {self.group_count}***")
-        logging.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
+        t_end = time.time()
+
+        print(f"TOTAL TIME: {t_end-t_start}")
+
+        overall_logger.info(f"\n***FINAL groups processed for crawl_id {self.crawl_id}: {self.group_count}***")
+        overall_logger.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
 
         self.db_crawl_end()
 

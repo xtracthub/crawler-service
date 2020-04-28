@@ -6,6 +6,7 @@ from crawlers.globus_base import GlobusCrawler
 from uuid import uuid4
 
 import threading
+import logging
 
 application = Flask(__name__)
 
@@ -15,6 +16,10 @@ application = Flask(__name__)
 
 
 crawler_dict = {}
+
+log = logging.getLogger('werkzeug')
+# log.disabled = True
+# application.logger.disabled = True
 
 
 def crawl_launch(crawler, tc):
@@ -51,7 +56,7 @@ def crawl_repo():
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
 
-@application.route('/get_status', methods=['GET'])
+@application.route('/get_crawl_status', methods=['GET'])
 def get_status():
 
     r = request.json

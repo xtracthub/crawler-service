@@ -2,7 +2,7 @@
 from materials_io.utils.interface import get_parser, get_available_parsers
 from uuid import uuid4
 import itertools
-import logging
+import time
 
 
 import networkx as nx
@@ -10,29 +10,30 @@ import networkx as nx
 
 class MatIOGrouper:
 
-    def __init__(self):
+    def __init__(self, logger):
         self.name = "matio"  # TODO: Add to parent class.
         self.soft_max_files = 50
         self.hard_max_files = 10
+        self.logger = logger
 
     def make_file_graph(self, group_dict):
 
         # for group in group_dict:
 
         num_g_1 = 0
-        logging.debug("Assembling graph")
+        self.logger.debug("Assembling graph")
         gr = nx.Graph()
         groups = []
         for parser in group_dict:
             for item in group_dict[parser]:
                 if len(item) > 1:
                     num_g_1 += 1
-                    logging.debug(f"Number of groups with more than 1 element: {num_g_1}")
-                    logging.debug(f"Len of largest group: {len(item)}")
+                    self.logger.debug(f"Number of groups with more than 1 element: {num_g_1}")
+                    self.logger.debug(f"Len of largest group: {len(item)}")
                 groups.append(item)
 
-        logging.debug("Generating nodes and edges... ")
-        logging.debug(f"Number of groups: {len(groups)}")
+        self.logger.debug("Generating nodes and edges... ")
+        self.logger.debug(f"Number of groups: {len(groups)}")
         for group in groups:
 
             # Add nodes
@@ -44,13 +45,13 @@ class MatIOGrouper:
             for edge in all_edges:
                 gr.add_edge(*edge)  # '*' to unpack the tuple.
 
-        logging.debug("Generating number of connected components...")
+        self.logger.debug("Generating number of connected components...")
         conn_comps = sorted(nx.connected_components(gr), key=len, reverse=True)
 
-        logging.debug(f"Number of connected components: {len(conn_comps)}")
-        logging.debug("Now counting nodes and edges...")
-        logging.debug(f"Number of nodes: {gr.number_of_nodes()}")
-        logging.debug(f"Number of edges: {gr.number_of_edges()}")
+        self.logger.debug(f"Number of connected components: {len(conn_comps)}")
+        self.logger.debug("Now counting nodes and edges...")
+        self.logger.debug(f"Number of nodes: {gr.number_of_nodes()}")
+        self.logger.debug(f"Number of edges: {gr.number_of_edges()}")
         gr.clear()
 
         # So at this point, conn_comps is all files that must travel together.
@@ -74,9 +75,8 @@ class MatIOGrouper:
             # Note here that every filename in the comp is associated with a single family id.
             for filename in comp:
 
-                # TODO: these should be all of the groups containing a given file.
                 gr_ids = file_groups_map[filename]
-                logging.debug(f"All groups containing file {filename}: {gr_ids}")
+                # self.logger.debug(f"All groups containing file {filename}: {gr_ids}")
 
                 # Add to the cumulative list of unique files across all groups in a family.
                 families[family_uuid]["files"].append(filename)
@@ -113,7 +113,7 @@ class MatIOGrouper:
 
             for gr in gr_list:
                 if len(gr) > self.hard_max_files:
-                    logging.debug(f"Proposed group too large ({len(gr)}). Skipping...")
+                    self.logger.warning(f"Proposed group too large ({len(gr)}). Skipping...")
                     continue
 
                 # Assign a group_id for each group.
@@ -129,10 +129,19 @@ class MatIOGrouper:
                 group_coll[parser].append(gr)
 
         # Get the connected components of the graph.
+        t_graph_start = time.time()
         conn_comps = self.make_file_graph(group_coll)
+        t_graph_end = time.time()
+
+        self.logger.info(f"Total time to build graph: {t_graph_end - t_graph_start}")
 
         # Use the connected components to generate a family for each connected component.
+        t_group_pack_start = time.time()
         families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
-        logging.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
+        t_group_pack_end = time.time()
+
+        self.logger.info(f"Total time to pack groups: {t_group_pack_end - t_graph_start}")
+
+        self.logger.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
         return families
