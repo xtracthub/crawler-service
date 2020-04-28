@@ -20,7 +20,7 @@ from .groupers import matio_grouper
 
 from .base import Crawler
 
-max_crawl_threads = 2
+max_crawl_threads = 4
 
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
@@ -29,6 +29,9 @@ fh = logging.FileHandler(f"crawl_main.log")
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 overall_logger.addHandler(fh)
+
+# Discovery -- we don't want to send it to the parent that's writing to console.
+#  See hierarchy (and one-line solution) here: https://opensource.com/article/17/9/python-logging
 overall_logger.propagate = False
 
 stream_handler = logging.StreamHandler()
