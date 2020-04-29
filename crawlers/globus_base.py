@@ -7,6 +7,7 @@ import time
 import logging
 import threading
 import pickle as pkl
+from random import randint
 
 from datetime import datetime
 from utils.pg_utils import pg_conn, pg_list
@@ -20,7 +21,7 @@ from .groupers import matio_grouper
 
 from .base import Crawler
 
-max_crawl_threads = 4
+max_crawl_threads = 8
 
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
@@ -181,7 +182,10 @@ class GlobusCrawler(Crawler):
                 if self.idle_worker_count >= self.max_crawl_threads:
                     file_logger.info(f"Worker ID: {worker_id} is terminating.")
                     return "CRAWL--COMPLETE"  # TODO: Behavior for collapsing a thread w/ no real return val?
-                time.sleep(2)
+
+                rand_wait = randint(1, 5)
+                time.sleep(rand_wait)
+
                 continue
 
             # OTHERWISE, pluck an item from queue.
