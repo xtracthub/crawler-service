@@ -21,7 +21,7 @@ from .groupers import matio_grouper
 
 from .base import Crawler
 
-max_crawl_threads = 4
+max_crawl_threads = 8
 
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
