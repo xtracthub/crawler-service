@@ -61,7 +61,9 @@ class GlobusCrawler(Crawler):
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
         self.count_bytes_crawled = 0
-        self.commit_gap = 1
+        self.commit_gap = 0.1
+
+        self.active_commits = 0
 
         self.images = []
         self.matio = []
@@ -95,10 +97,11 @@ class GlobusCrawler(Crawler):
         while True:
 
             time.sleep(self.commit_gap)
+
             cur = self.conn.cursor()
             insertables = []
 
-            if self.groups_to_commit.empty():
+            if self.groups_to_commit.empty() or self.active_commits < 1000:
                 # Want to denote for the parent crawler process that we're doing nothing.
                 self.commit_queue_empty = True
                 continue
@@ -109,14 +112,20 @@ class GlobusCrawler(Crawler):
             while not self.groups_to_commit.empty():
                 insertables.append(self.groups_to_commit.get())
 
-            logging.debug("[COMMIT] Preparing batch commit -- executing!")
-            args_str = ','.join(insertables)
-            cur.execute(f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end, status) VALUES {args_str}")
-            logging.debug("BATCH TRANSACTION EXECUTED -- COMMITTING NOW!")
 
-            logging.debug(f"Committing after {self.commit_gap} seconds!")
-            self.conn.commit()
-            print("SUCCESSFULLY COMMITTED!")
+            try:
+                logging.debug("[COMMIT] Preparing batch commit -- executing!")
+                args_str = ','.join(insertables)
+                cur.execute(f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end, status) VALUES {args_str}")
+                logging.debug("BATCH TRANSACTION EXECUTED -- COMMITTING NOW!")
+
+                logging.debug(f"Committing after {self.commit_gap} seconds!")
+                self.conn.commit()
+                print("SUCCESSFULLY COMMITTED!")
+            except:
+                self.conn.rollback()
+                self.conn.close()
+                self.conn = pg_conn()
 
     def get_extension(self, filepath):
         """Returns the extension of a filepath.
@@ -355,6 +364,7 @@ class GlobusCrawler(Crawler):
                                 group_to_commit = f"('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start}, {t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
 
                                 self.groups_to_commit.put(group_to_commit)
+                                self.active_commits += 1
 
                                 # logging.info(f"Group Metadata query: {query}")
                                 self.group_count += 1
