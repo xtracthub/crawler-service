@@ -64,6 +64,7 @@ class GlobusCrawler(Crawler):
         self.commit_gap = 0.1
 
         self.active_commits = 0
+        self.success_group_commit_count = 0
 
         self.images = []
         self.matio = []
@@ -81,8 +82,8 @@ class GlobusCrawler(Crawler):
             overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
         logging.info("Launching occasional commit thread")
-        commit_thr = threading.Thread(target=self.occasional_commit, args=())
-        commit_thr.start()
+        # commit_thr = threading.Thread(target=self.occasional_commit, args=())
+        # commit_thr.start()
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -115,13 +116,12 @@ class GlobusCrawler(Crawler):
             # Oops, not empty. This means we need to update this flag so the crawler knows not to mark as 'complete'.
             self.commit_queue_empty = False
 
+            # Remove up to n elements from queue, where n is current_batch.
             current_batch = 0
-
             while not self.groups_to_commit.empty() and current_batch < 1000:
                 insertables.append(self.groups_to_commit.get())
                 self.active_commits -= 1
                 current_batch += 1
-
 
             try:
                 logging.debug("[COMMIT] Preparing batch commit -- executing!")
@@ -132,6 +132,7 @@ class GlobusCrawler(Crawler):
                 logging.debug(f"Committing after {self.commit_gap} seconds!")
                 self.conn.commit()
                 print("SUCCESSFULLY COMMITTED!")
+                self.success_group_commit_count += current_batch
             except:
                 self.conn.rollback()
                 self.conn.close()
@@ -349,9 +350,6 @@ class GlobusCrawler(Crawler):
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
                                 self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
 
-                        # file_logger.debug(group_info)
-                        cur = self.conn.cursor()
-
                         try:
                             files = pg_list(group_info["files"])
                             parsers = pg_list(['crawler'])
@@ -373,7 +371,7 @@ class GlobusCrawler(Crawler):
 
                                 group_to_commit = f"('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start}, {t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
 
-                                self.groups_to_commit.put(group_to_commit)
+                                # self.groups_to_commit.put(group_to_commit)
                                 self.active_commits += 1
 
                                 # logging.info(f"Group Metadata query: {query}")
