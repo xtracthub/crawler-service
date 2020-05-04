@@ -6,12 +6,12 @@ import uuid
 import time
 import logging
 import threading
-import pickle as pkl
-from random import randint
-
-from datetime import datetime
-from utils.pg_utils import pg_conn, pg_list
 import psycopg2
+
+from random import randint
+from datetime import datetime
+import pickle as pkl
+from utils.pg_utils import pg_conn, pg_list
 
 from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
@@ -56,11 +56,12 @@ class GlobusCrawler(Crawler):
         self.worker_status_dict = {}
         self.idle_worker_count = 0
         self.max_crawl_threads = max_crawl_threads
+        self.groups_to_commit = Queue()
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
         self.count_bytes_crawled = 0
-        self.commit_gap = 10
+        self.commit_gap = 1
 
         self.images = []
         self.matio = []
@@ -69,17 +70,17 @@ class GlobusCrawler(Crawler):
 
         self.insert_files_queue = Queue()
 
+        self.commit_queue_empty = False
+
 
         try:
             self.token_owner = self.get_uid_from_token()
         except:  # TODO: Real auth that's not just printing.
             overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
-        self.logging_level = logging_level
-
         logging.info("Launching occasional commit thread")
         commit_thr = threading.Thread(target=self.occasional_commit, args=())
-        # commit_thr.start()
+        commit_thr.start()
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -89,10 +90,33 @@ class GlobusCrawler(Crawler):
         return self.conn.commit()
 
     def occasional_commit(self):
+
+        # TODO: Will this become a zombie thread.
         while True:
+
             time.sleep(self.commit_gap)
+            cur = self.conn.cursor()
+            insertables = []
+
+            if self.groups_to_commit.empty():
+                # Want to denote for the parent crawler process that we're doing nothing.
+                self.commit_queue_empty = True
+                continue
+
+            # Oops, not empty. This means we need to update this flag so the crawler knows not to mark as 'complete'.
+            self.commit_queue_empty = False
+
+            while not self.groups_to_commit.empty():
+                insertables.append(self.groups_to_commit.get())
+
+            logging.debug("[COMMIT] Preparing batch commit -- executing!")
+            args_str = ','.join(insertables)
+            cur.execute(f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end, status) VALUES {args_str}")
+            logging.debug("BATCH TRANSACTION EXECUTED -- COMMITTING NOW!")
+
             logging.debug(f"Committing after {self.commit_gap} seconds!")
             self.conn.commit()
+            print("SUCCESSFULLY COMMITTED!")
 
     def get_extension(self, filepath):
         """Returns the extension of a filepath.
@@ -322,13 +346,17 @@ class GlobusCrawler(Crawler):
                             t_end = time.time()
 
                             try:
-                                query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
-                                    f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
-                                    f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
-                                    f"'{files}', '{parsers}', " \
-                                    f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
+                                # query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
+                                #     f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
+                                #     f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
+                                #     f"'{files}', '{parsers}', " \
+                                #     f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"crawled
 
-                                logging.info(f"Group Metadata query: {query}")
+                                group_to_commit = f"('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start}, {t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
+
+                                self.groups_to_commit.put(group_to_commit)
+
+                                # logging.info(f"Group Metadata query: {query}")
                                 self.group_count += 1
                                 # cur.execute(query)  # TODO: 1
                             except Exception as e:
@@ -402,7 +430,14 @@ class GlobusCrawler(Crawler):
         overall_logger.info(f"\n***FINAL groups processed for crawl_id {self.crawl_id}: {self.group_count}***")
         overall_logger.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
 
-        self.db_crawl_end()
+        while True:
+            # TODO: Should maybe have an intermediate "COMMITTING" status here.
+            if self.commit_queue_empty:
+                self.db_crawl_end()
+                break
+            else:
+                print("Crawl completed, but waiting for commit queue to finish!")
+                time.sleep(1)
 
         with open('failed_dirs.json', 'w') as fp:
             json.dump(self.failed_dirs, fp)
