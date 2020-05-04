@@ -101,10 +101,16 @@ class GlobusCrawler(Crawler):
             cur = self.conn.cursor()
             insertables = []
 
+            # If empty or under max number of commits, then we want to return.
+            # TODO: Don't think we need the double-check here.
             if self.groups_to_commit.empty() or self.active_commits < 1000:
+
                 # Want to denote for the parent crawler process that we're doing nothing.
-                self.commit_queue_empty = True
-                continue
+                if not self.groups_to_commit.empty() and self.crawl_status == "COMMITTING":
+                    pass
+                else:
+                    self.commit_queue_empty = True
+                    continue
 
             # Oops, not empty. This means we need to update this flag so the crawler knows not to mark as 'complete'.
             self.commit_queue_empty = False
@@ -433,6 +439,8 @@ class GlobusCrawler(Crawler):
         for t in list_threads:
             t.join()
 
+        self.crawl_status = "COMMITTING"
+
         t_end = time.time()
 
         print(f"TOTAL TIME: {t_end-t_start}")
@@ -442,6 +450,7 @@ class GlobusCrawler(Crawler):
 
         while True:
             # TODO: Should maybe have an intermediate "COMMITTING" status here.
+            # TODO 2: Should also not check queue but receive status directly from DB thread.
             if self.commit_queue_empty:
                 self.db_crawl_end()
                 break
