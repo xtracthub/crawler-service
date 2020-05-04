@@ -115,8 +115,12 @@ class GlobusCrawler(Crawler):
             # Oops, not empty. This means we need to update this flag so the crawler knows not to mark as 'complete'.
             self.commit_queue_empty = False
 
-            while not self.groups_to_commit.empty():
+            current_batch = 0
+
+            while not self.groups_to_commit.empty() and current_batch < 1000:
                 insertables.append(self.groups_to_commit.get())
+                self.active_commits -= 1
+                current_batch += 1
 
 
             try:
