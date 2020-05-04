@@ -14,5 +14,5 @@ flask_api
 flask_wtf
 requests
 networkx
-xmltodict
-pycalphad
+# xmltodict
+# pycalphad
