@@ -73,7 +73,7 @@ class GlobusCrawler(Crawler):
 
         self.insert_files_queue = Queue()
 
-        self.commit_queue_empty = False
+        self.commit_queue_empty = True  # TODO: switch back to false when committing turned back on. 
 
 
         try:
