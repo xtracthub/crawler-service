@@ -15,4 +15,5 @@ flask_wtf
 requests
 networkx
 xmltodict
-pycalphad
+# pycalphad
+ipyopt
