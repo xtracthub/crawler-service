@@ -16,4 +16,4 @@ requests
 networkx
 xmltodict
 # pycalphad
-ipyopt
+# ipyopt
