@@ -21,7 +21,7 @@ from .groupers import matio_grouper
 
 from .base import Crawler
 
-max_crawl_threads = 8
+max_crawl_threads = 16
 
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
@@ -73,7 +73,7 @@ class GlobusCrawler(Crawler):
 
         self.insert_files_queue = Queue()
 
-        self.commit_queue_empty = True  # TODO: switch back to false when committing turned back on. 
+        self.commit_queue_empty = True  # TODO: switch back to false when committing turned back on.
 
 
         try:
