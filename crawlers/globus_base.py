@@ -4,6 +4,7 @@ import sys
 import json
 import uuid
 import time
+import boto3
 import logging
 import threading
 import psycopg2
@@ -56,7 +57,7 @@ class GlobusCrawler(Crawler):
         self.worker_status_dict = {}
         self.idle_worker_count = 0
         self.max_crawl_threads = max_crawl_threads
-        self.groups_to_commit = Queue()
+        self.families_to_enqueue = Queue()
 
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
@@ -66,15 +67,21 @@ class GlobusCrawler(Crawler):
         self.active_commits = 0
         self.success_group_commit_count = 0
 
-        self.images = []
-        self.matio = []
-        self.keyword = []
-        self.jsonxml = []
-
         self.insert_files_queue = Queue()
 
         self.commit_queue_empty = True  # TODO: switch back to false when committing turned back on.
 
+        self.client = boto3.client('sqs',
+                              aws_access_key_id=os.environ["aws_access"],
+                              aws_secret_access_key=os.environ["aws_secret"])
+        print(f"Creating queue for crawl_id: {self.crawl_id}")
+        queue = self.client.create_queue(QueueName=str(self.crawl_id))
+
+        if queue["ResponseMetadata"]["HTTPStatusCode"] == 200:
+            self.queue_url = queue["QueueUrl"]
+        else:
+            raise ConnectionError("Received non-200 status from SQS!")
+        print(queue)
 
         try:
             self.token_owner = self.get_uid_from_token()
@@ -82,8 +89,10 @@ class GlobusCrawler(Crawler):
             overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
         logging.info("Launching occasional commit thread")
-        # commit_thr = threading.Thread(target=self.occasional_commit, args=())
-        # commit_thr.start()
+        commit_thr = threading.Thread(target=self.enqueue_loop, args=())
+        commit_thr.start()
+
+    # def create_sqs_queue(self):
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -92,9 +101,8 @@ class GlobusCrawler(Crawler):
 
         return self.conn.commit()
 
-    def occasional_commit(self):
+    def enqueue_loop(self):
 
-        # TODO: Will this become a zombie thread.
         while True:
 
             time.sleep(self.commit_gap)
@@ -104,10 +112,10 @@ class GlobusCrawler(Crawler):
 
             # If empty or under max number of commits, then we want to return.
             # TODO: Don't think we need the double-check here.
-            if self.groups_to_commit.empty() or self.active_commits < 1000:
+            if self.families_to_enqueue.empty() or self.active_commits < 1000:
 
                 # Want to denote for the parent crawler process that we're doing nothing.
-                if not self.groups_to_commit.empty() and self.crawl_status == "COMMITTING":
+                if not self.families_to_enqueue.empty() and self.crawl_status == "COMMITTING":
                     pass
                 else:
                     self.commit_queue_empty = True
@@ -117,26 +125,22 @@ class GlobusCrawler(Crawler):
             self.commit_queue_empty = False
 
             # Remove up to n elements from queue, where n is current_batch.
-            current_batch = 0
-            while not self.groups_to_commit.empty() and current_batch < 1000:
-                insertables.append(self.groups_to_commit.get())
+            current_batch = 1
+            while not self.families_to_enqueue.empty() and current_batch < 10:
+                insertables.append(self.families_to_enqueue.get())
                 self.active_commits -= 1
                 current_batch += 1
 
-            try:
-                logging.debug("[COMMIT] Preparing batch commit -- executing!")
-                args_str = ','.join(insertables)
-                cur.execute(f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, owner, family_id, crawl_start, crawl_end, group_start, group_end, status) VALUES {args_str}")
-                logging.debug("BATCH TRANSACTION EXECUTED -- COMMITTING NOW!")
+            logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
-                logging.debug(f"Committing after {self.commit_gap} seconds!")
-                self.conn.commit()
-                print("SUCCESSFULLY COMMITTED!")
-                self.success_group_commit_count += current_batch
-            except:
-                self.conn.rollback()
-                self.conn.close()
-                self.conn = pg_conn()
+            try:
+                response = self.client.send_message_batch(QueueUrl=self.queue_url,
+                                                          Entries=insertables)
+                logging.debug(f"SQS response: {response}")
+            except Exception as e:  # TODO: too vague
+                print("WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE.")
+
+            self.success_group_commit_count += current_batch
 
     def get_extension(self, filepath):
         """Returns the extension of a filepath.
@@ -203,8 +207,6 @@ class GlobusCrawler(Crawler):
         file_logger.addHandler(fh)
         file_logger.propagate = False
 
-        file_logger.warning("TESTING LOGGER")
-
         self.worker_status_dict[worker_id] = "STARTING"
 
         grouper = matio_grouper.MatIOGrouper(logger=file_logger)
@@ -229,7 +231,6 @@ class GlobusCrawler(Crawler):
 
                 rand_wait = randint(1, 5)
                 time.sleep(rand_wait)
-
                 continue
 
             # OTHERWISE, pluck an item from queue.
@@ -313,17 +314,24 @@ class GlobusCrawler(Crawler):
                 # For all families
                 for family in families:
 
-                    # logging.debug(f"Preparing family for DB ingest: {family}")
-
                     tracked_files = set()
                     num_file_count = 0
                     num_bytes_count = 0
 
+                    # print(families[family])
+
                     groups = families[family]["groups"]
+
+                    fam_file_metadata = {}
+
+                    for filename in families[family]["files"]:
+                        fam_file_metadata[filename] = all_file_mdata[filename]
+
+                    families[family]["files"] = fam_file_metadata
+                    families[family]["family_id"] = family
 
                     # For all groups in the family
                     for group in groups:
-
                         self.count_groups_crawled += 1
                         parser = groups[group]["parser"]
                         logging.debug(f"Parser: {parser}")
@@ -331,78 +339,41 @@ class GlobusCrawler(Crawler):
                         gr_id = group
                         file_list = groups[group]["files"]
 
-                        # file_logger.debug("IN GROUP-BY-PARSER LOOP...")
-                        # file_logger.debug(f"Group Tuple: {group}")
-
-                        group_info = {"group_id": gr_id, "parser": parser, "files": [], "mdata": []}
-                        group_info["files"] = file_list
-
-                        # file_logger.debug(f"Processing number of files: {len(file_list)}")
                         for f in file_list:
 
-                            group_info["mdata"].append({"file": f, "blob": all_file_mdata[f]})
-
                             if f not in tracked_files:
-                                # print(f"Found new file: {f}")
                                 tracked_files.add(f)
                                 num_file_count += 1
                                 self.count_files_crawled += 1
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
                                 self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
 
-                        try:
-                            files = pg_list(group_info["files"])
-                            parsers = pg_list(['crawler'])
-
-                        except ValueError as e:
-                            file_logger.error(f"Caught ValueError {e}")
-                            self.failed_groups["illegal_char"].append((group_info["files"], ['crawler']))
-                            file_logger.error("Continuing!")
-
-                        else:
                             t_end = time.time()
 
-                            try:
-                                # query = f"INSERT INTO group_metadata_2 (group_id, crawl_id, metadata, files, parsers, " \
-                                #     f"owner, family_id, crawl_start, crawl_end, group_start, group_end, status) " \
-                                #     f"VALUES ('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, " \
-                                #     f"'{files}', '{parsers}', " \
-                                #     f"'{self.token_owner}', '{family}', {t_start},{t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"crawled
+                            # TODO: ALL of these args into the family.
+                            # try:
+                                # mdata_group = {"group_id": gr_id,
+                                #                "crawl_id": str(self.crawl_id),
+                                #                "metadata": group_info,
+                                #                "files": files,
+                                #                "parsers": parsers,
+                                #                "owner": self.token_owner,
+                                #                "family": family,
+                                #                "t_crawl_start": t_start,
+                                #                "t_crawl_end": t_end,
+                                #                "t_group_start": group_start_t,
+                                #                "t_group_end": group_end_t}
 
-                                group_to_commit = f"('{gr_id}', '{self.crawl_id}', {psycopg2.Binary(pkl.dumps(group_info))}, '{files}', '{parsers}', '{self.token_owner}', '{family}', {t_start}, {t_end}, {group_start_t}, {group_end_t}, '{'crawled'}')"
+                                # Put on queue
 
-                                # self.groups_to_commit.put(group_to_commit)
-                                self.active_commits += 1
-
-                                # logging.info(f"Group Metadata query: {query}")
-                                self.group_count += 1
-                                # cur.execute(query)  # TODO: 1
-                            except Exception as e:
-                                print(group_info['files'])
-                                # TODO: SET TO FAILED.
-                                self.conn.rollback()
-                                print(e)
-                                print("SET TO FAILED")
-                                self.conn.close()
-                                self.conn = pg_conn()
-                                continue
+                        self.active_commits += 1
+                        self.group_count += 1
 
 
-                    try:
-                        # TODO: I think the family needs to fail or something if one/more of its groups failed?
-                        # Update familes table here.
-                        fam_cur = self.conn.cursor()
-                        fam_update_q = f"""INSERT INTO families (family_id, status, total_size, total_files, crawl_id) VALUES 
-                        ('{family}', 'INIT', {num_bytes_count}, {num_file_count}, '{self.crawl_id}') ;"""
-                        # fam_cur.execute(fam_update_q) # TODO: 2
-                        # self.conn.commit()
-                    except psycopg2.DatabaseError as e:
-                        self.conn.rollback()
-                        print(e)
-                        print("SET AS FAILED 2.")
-                        self.conn.close()
-                        self.conn = pg_conn()
-                        continue
+                    # print(families[family])
+                    # exit()\
+                    self.families_to_enqueue.put({"Id": str(self.group_count), "MessageBody": json.dumps(families[family])})
+
 
             except TransferAPIError as e:
                 file_logger.error("Problem directory {}".format(cur_dir))
@@ -412,7 +383,6 @@ class GlobusCrawler(Crawler):
                 self.failed_dirs["failed"].append(cur_dir)
                 continue
             t_while_iter = time.time()
-            # print(f"Total While loop time: {t_while_iter - t_start}")
 
     def crawl(self, transfer):
         dir_name = "./xtract_metadata"

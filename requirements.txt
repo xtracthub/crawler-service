@@ -15,5 +15,6 @@ flask_wtf
 requests
 networkx
 xmltodict
+boto3
 # pycalphad
 # ipyopt
