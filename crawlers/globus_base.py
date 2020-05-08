@@ -89,8 +89,17 @@ class GlobusCrawler(Crawler):
             overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
         logging.info("Launching occasional commit thread")
-        commit_thr = threading.Thread(target=self.enqueue_loop, args=())
-        commit_thr.start()
+        commit_thr0 = threading.Thread(target=self.enqueue_loop, args=())
+        commit_thr1 = threading.Thread(target=self.enqueue_loop, args=())
+        commit_thr2 = threading.Thread(target=self.enqueue_loop, args=())
+        commit_thr3 = threading.Thread(target=self.enqueue_loop, args=())
+        commit_thr4 = threading.Thread(target=self.enqueue_loop, args=())
+
+        commit_thr0.start()
+        commit_thr1.start()
+        commit_thr2.start()
+        commit_thr3.start()
+        commit_thr4.start()
 
     # def create_sqs_queue(self):
 
@@ -106,8 +115,6 @@ class GlobusCrawler(Crawler):
         while True:
 
             time.sleep(self.commit_gap)
-
-            cur = self.conn.cursor()
             insertables = []
 
             # If empty or under max number of commits, then we want to return.
