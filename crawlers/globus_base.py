@@ -73,7 +73,7 @@ class GlobusCrawler(Crawler):
 
         self.client = boto3.client('sqs',
                               aws_access_key_id=os.environ["aws_access"],
-                              aws_secret_access_key=os.environ["aws_secret"])
+                              aws_secret_access_key=os.environ["aws_secret"], region_name='us-east-1')
         print(f"Creating queue for crawl_id: {self.crawl_id}")
         queue = self.client.create_queue(QueueName=str(self.crawl_id))
 
