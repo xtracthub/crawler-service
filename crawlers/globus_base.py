@@ -7,12 +7,10 @@ import time
 import boto3
 import logging
 import threading
-import psycopg2
 
 from random import randint
 from datetime import datetime
-import pickle as pkl
-from utils.pg_utils import pg_conn, pg_list
+from utils.pg_utils import pg_conn
 
 from queue import Queue
 from globus_sdk.exc import GlobusAPIError, TransferAPIError, GlobusTimeoutError
@@ -65,7 +63,9 @@ class GlobusCrawler(Crawler):
         self.commit_gap = 0.1
 
         self.active_commits = 0
+        self.commit_threads = 10
         self.success_group_commit_count = 0
+        self.commit_completed = False
 
         self.insert_files_queue = Queue()
 
@@ -89,19 +89,15 @@ class GlobusCrawler(Crawler):
             overall_logger.info("Unable to authenticate user: Invalid Token. Aborting crawl.")
 
         logging.info("Launching occasional commit thread")
-        commit_thr0 = threading.Thread(target=self.enqueue_loop, args=())
-        commit_thr1 = threading.Thread(target=self.enqueue_loop, args=())
-        commit_thr2 = threading.Thread(target=self.enqueue_loop, args=())
-        commit_thr3 = threading.Thread(target=self.enqueue_loop, args=())
-        commit_thr4 = threading.Thread(target=self.enqueue_loop, args=())
 
-        commit_thr0.start()
-        commit_thr1.start()
-        commit_thr2.start()
-        commit_thr3.start()
-        commit_thr4.start()
-
-    # def create_sqs_queue(self):
+        self.sqs_push_threads = {}
+        self.thr_ls = []
+        for i in range(0, self.commit_threads):
+            thr = threading.Thread(target=self.enqueue_loop, args=(i,))
+            self.thr_ls.append(thr)
+            thr.start()
+            self.sqs_push_threads[i] = True
+        print(f"Successfully started {len(self.sqs_push_threads)} SQS push threads!")
 
     def db_crawl_end(self):
         cur = self.conn.cursor()
@@ -110,26 +106,26 @@ class GlobusCrawler(Crawler):
 
         return self.conn.commit()
 
-    def enqueue_loop(self):
+    def enqueue_loop(self, thr_id):
 
         while True:
-
-            time.sleep(self.commit_gap)
             insertables = []
 
-            # If empty or under max number of commits, then we want to return.
-            # TODO: Don't think we need the double-check here.
-            if self.families_to_enqueue.empty() or self.active_commits < 1000:
+            # If empty, then we want to return.
+            if self.families_to_enqueue.empty():
+                # If ingest queue empty, we can demote to "idle"
+                if self.crawl_status == "COMMITTING":
+                    self.sqs_push_threads[thr_id] = "IDLE"
+                    time.sleep(0.25)
 
-                # Want to denote for the parent crawler process that we're doing nothing.
-                if not self.families_to_enqueue.empty() and self.crawl_status == "COMMITTING":
-                    pass
-                else:
-                    self.commit_queue_empty = True
-                    continue
+                    # NOW if all threads idle, then return!
+                    if all(value == "IDLE" for value in self.sqs_push_threads.values()):
+                        self.commit_completed = True
+                        return 0
+                time.sleep(1)
+                continue
 
-            # Oops, not empty. This means we need to update this flag so the crawler knows not to mark as 'complete'.
-            self.commit_queue_empty = False
+            self.sqs_push_threads[thr_id] = "ACTIVE"
 
             # Remove up to n elements from queue, where n is current_batch.
             current_batch = 1
@@ -138,6 +134,8 @@ class GlobusCrawler(Crawler):
                 self.active_commits -= 1
                 current_batch += 1
 
+            print(f"Insertables: {insertables}")
+
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
             try:
@@ -145,7 +143,7 @@ class GlobusCrawler(Crawler):
                                                           Entries=insertables)
                 logging.debug(f"SQS response: {response}")
             except Exception as e:  # TODO: too vague
-                print("WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE.")
+                print(f"WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE: {e}")
 
             self.success_group_commit_count += current_batch
 
@@ -420,6 +418,11 @@ class GlobusCrawler(Crawler):
 
         self.crawl_status = "COMMITTING"
 
+        print("Waiting for commit to end...")
+        for t in self.thr_ls:
+            t.join()
+        print("COMMIT SUCCESSFULLY ENDED!")
+
         t_end = time.time()
 
         print(f"TOTAL TIME: {t_end-t_start}")
@@ -428,7 +431,6 @@ class GlobusCrawler(Crawler):
         overall_logger.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
 
         while True:
-            # TODO: Should maybe have an intermediate "COMMITTING" status here.
             # TODO 2: Should also not check queue but receive status directly from DB thread.
             if self.commit_queue_empty:
                 self.db_crawl_end()
