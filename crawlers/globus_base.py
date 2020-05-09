@@ -309,12 +309,8 @@ class GlobusCrawler(Crawler):
                         full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
 
-                # file_logger.debug(f"Finished parsing files. Metadata: {all_file_mdata}")
-
                 #  We want to process each potential group of files.
-                group_start_t = time.time()
                 families = grouper.group(f_names)
-                group_end_t = time.time()
 
                 # For all families
                 for family in families:
@@ -322,8 +318,6 @@ class GlobusCrawler(Crawler):
                     tracked_files = set()
                     num_file_count = 0
                     num_bytes_count = 0
-
-                    # print(families[family])
 
                     groups = families[family]["groups"]
 
@@ -353,32 +347,10 @@ class GlobusCrawler(Crawler):
                                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
                                 self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
 
-                            t_end = time.time()
-
-                            # TODO: ALL of these args into the family.
-                            # try:
-                                # mdata_group = {"group_id": gr_id,
-                                #                "crawl_id": str(self.crawl_id),
-                                #                "metadata": group_info,
-                                #                "files": files,
-                                #                "parsers": parsers,
-                                #                "owner": self.token_owner,
-                                #                "family": family,
-                                #                "t_crawl_start": t_start,
-                                #                "t_crawl_end": t_end,
-                                #                "t_group_start": group_start_t,
-                                #                "t_group_end": group_end_t}
-
-                                # Put on queue
-
                         self.active_commits += 1
                         self.group_count += 1
 
-
-                    # print(families[family])
-                    # exit()\
                     self.families_to_enqueue.put({"Id": str(self.group_count), "MessageBody": json.dumps(families[family])})
-
 
             except TransferAPIError as e:
                 file_logger.error("Problem directory {}".format(cur_dir))
@@ -387,7 +359,6 @@ class GlobusCrawler(Crawler):
                 print(e)
                 self.failed_dirs["failed"].append(cur_dir)
                 continue
-            t_while_iter = time.time()
 
     def crawl(self, transfer):
         dir_name = "./xtract_metadata"
