@@ -7,7 +7,7 @@ Pillow
 # numpy
 # pymatgen
 # git+https://github.com/materials-data-facility/MaterialsIO.git
-hyperspy
+# hyperspy
 tableschema
 flask
 flask_api
