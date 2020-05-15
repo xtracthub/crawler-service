@@ -75,7 +75,7 @@ class GlobusCrawler(Crawler):
                               aws_access_key_id=os.environ["aws_access"],
                               aws_secret_access_key=os.environ["aws_secret"], region_name='us-east-1')
         print(f"Creating queue for crawl_id: {self.crawl_id}")
-        queue = self.client.create_queue(QueueName=f"crawl::{str(self.crawl_id)}")
+        queue = self.client.create_queue(QueueName=f"crawl_{str(self.crawl_id)}")
 
         if queue["ResponseMetadata"]["HTTPStatusCode"] == 200:
             self.queue_url = queue["QueueUrl"]
