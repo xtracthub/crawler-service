@@ -3,6 +3,7 @@ from flask import Flask, request
 from flask_api import status
 
 from crawlers.globus_base import GlobusCrawler
+from crawlers.google_drive import g_crawl
 from uuid import uuid4
 
 import threading
@@ -54,6 +55,18 @@ def crawl_repo():
     crawler_dict[str(crawl_id)] = crawler
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
+
+
+@application.route('/crawl_gdrive', methods=["POST"])
+def crawl_gdrive():
+    r = request.json
+    gauth = r['gauth']
+
+    files = g_crawl(gauth)
+
+    return files
+
+
 
 
 @application.route('/get_crawl_status', methods=['GET'])

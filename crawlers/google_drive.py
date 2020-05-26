@@ -1,0 +1,19 @@
+
+def g_crawl(gauth):
+  auth_pkl = pkl.dumps(gauth)
+
+  gauth = pkl.loads(auth_pkl)
+
+  drive = GoogleDrive(gauth)  # Create GoogleDrive instance with authenticated GoogleAuth instance
+
+  # Auto-iterate through all files in the root folder.
+  # file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+  file_list = drive.ListFile({'q': "mimeType='image/jpeg' and trashed=false"}).GetList()
+  folder_list = drive.ListFile({'q': "mimeType = 'application/vnd.google-apps.folder'"}).GetList()
+
+
+  for folder in folder_list:
+    print('title: %s, id: %s' % (folder['title'], folder['id']))
+
+  # for file1 in file_list:#   print('title: %s, id: %s' % (file1['title'], file1['id']))
+  return folder_list

@@ -16,5 +16,6 @@ requests
 networkx
 xmltodict
 boto3
+pydrive
 # pycalphad
 # ipyopt
