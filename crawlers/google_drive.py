@@ -8,6 +8,8 @@ def g_crawl(auth_pkl):
   try:
     # auth_pkl = pkl.dumps(gauth)
 
+    print(f"GAUTH: {auth_pkl}")
+
     gauth = pkl.loads(auth_pkl)
 
     drive = GoogleDrive(gauth)  # Create GoogleDrive instance with authenticated GoogleAuth instance
