@@ -62,7 +62,7 @@ def crawl_gdrive():
     r = request.json
     gauth = r['gauth']
 
-    files = g_crawl(gauth)
+    files = g_crawl(pkl.loads(gauth))
 
     return files
 
