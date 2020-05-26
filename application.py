@@ -60,9 +60,9 @@ def crawl_repo():
 @application.route('/crawl_gdrive', methods=["POST"])
 def crawl_gdrive():
     r = request.json
-    gauth = r['gauth']
+    gauth_pkl = r['gauth']
 
-    files = g_crawl(pkl.loads(gauth))
+    files = g_crawl(gauth_pkl)
 
     return files
 
