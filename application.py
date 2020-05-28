@@ -127,7 +127,7 @@ def crawl(service):
         if len(items) < 1000 or not items:
             print('Time to break... or no files found')
             print(f"Total files processed: {len(all_files)}")
-            return(all_files)
+            return {"file_mdata": all_files}
 
 
 def generate_drive_connection(creds):
