@@ -59,12 +59,8 @@ def crawl_repo():
 
 @application.route('/crawl_gdrive', methods=["POST"])
 def crawl_gdrive():
-    r = request.json
-    gauth_pkl = r['gauth']
-
-    files = g_crawl(gauth_pkl)
-
-    return files
+    r = request.data
+    return r
 
 
 
@@ -89,6 +85,39 @@ def get_status():
 
     else:
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
+
+
+def get_next_page(service, nextPageToken):
+    results = service.files().list(
+        pageSize=1000, pageToken=nextPageToken,
+        fields="nextPageToken, files(id, name, size, mimeType, fullFileExtension)").execute()
+
+    return results
+
+
+def crawl(service):
+    all_files = []
+    nextPageToken = None
+
+    while True:
+
+        if not nextPageToken:
+
+            # Call the Drive v3 API
+            results = get_next_page(service, None)
+
+        else:
+            results = get_next_page(service, nextPageToken)
+
+        items = results.get('files', [])
+        nextPageToken = results.get("nextPageToken", [])
+        all_files.extend(items)
+
+        # TODO: Do I need to break before this point?
+        if len(items) < 1000 or not items:
+            print('Time to break... or no files found')
+            print(f"Total files processed: {len(all_files)}")
+            return(all_files)
 
 
 if __name__ == '__main__':
