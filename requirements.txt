@@ -19,3 +19,6 @@ boto3
 pyDrive
 # pycalphad
 # ipyopt
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

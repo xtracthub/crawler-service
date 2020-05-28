@@ -4,10 +4,13 @@ from flask_api import status
 
 from crawlers.globus_base import GlobusCrawler
 from crawlers.google_drive import g_crawl
+from googleapiclient.discovery import build
+
 from uuid import uuid4
 
 import threading
 import logging
+import pickle
 
 application = Flask(__name__)
 
@@ -60,9 +63,15 @@ def crawl_repo():
 @application.route('/crawl_gdrive', methods=["POST"])
 def crawl_gdrive():
     r = request.data
-    return r
 
+    creds = pickle.loads(r)[0]
 
+    print(creds)
+
+    service = generate_drive_connection(creds)
+    file_mdata = crawl(service)
+
+    return file_mdata
 
 
 @application.route('/get_crawl_status', methods=['GET'])
@@ -98,6 +107,7 @@ def get_next_page(service, nextPageToken):
 def crawl(service):
     all_files = []
     nextPageToken = None
+    print("CRAWLING")
 
     while True:
 
@@ -118,6 +128,11 @@ def crawl(service):
             print('Time to break... or no files found')
             print(f"Total files processed: {len(all_files)}")
             return(all_files)
+
+
+def generate_drive_connection(creds):
+    service = build('drive', 'v3', credentials=creds)
+    return service
 
 
 if __name__ == '__main__':
