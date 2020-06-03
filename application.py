@@ -81,20 +81,6 @@ def crawl_repo():
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
 
-# @application.route('/crawl_gdrive', methods=["POST"])
-# def crawl_gdrive():
-#     r = request.data
-#
-#     creds = pickle.loads(r)[0]
-#
-#     print(creds)
-#
-#     service = generate_drive_connection(creds)
-#     file_mdata = crawl(service)
-#
-#     return file_mdata
-
-
 @application.route('/get_crawl_status', methods=['GET'])
 def get_status():
 
@@ -116,6 +102,25 @@ def get_status():
     else:
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
+
+@application.route('/fetch_crawl_mdata', methods=["POST"])
+def fetch_mdata():
+    """ Fetch endpoint -- only for Will & Co's GDrive case to fetch their metadata.
+
+    :returns {crawl_id: str, metadata: dict} (dict)"""
+
+    r = request.json
+    crawl_id = r['crawl_id']
+
+    mdata = None
+
+    # TODO: Get metadata right here.
+
+    # TODO: Step 1. Save it.
+    # TODO: Step 2. Get it.
+    # TODO: Step 3. Remove it.
+
+    return {"crawl_id": str(crawl_id), "metadata": mdata}
 
 if __name__ == '__main__':
     application.run(debug=True, threaded=True)
