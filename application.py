@@ -2,9 +2,9 @@
 from flask import Flask, request
 from flask_api import status
 
+# Import each of our crawlers.
 from crawlers.globus_base import GlobusCrawler
-from crawlers.google_drive import g_crawl
-from googleapiclient.discovery import build
+from crawlers.google_drive import GoogleDriveCrawler
 
 from uuid import uuid4
 
@@ -39,39 +39,60 @@ def hello():
 @application.route('/crawl', methods=['POST'])
 def crawl_repo():
 
-    r = request.json
+    r = request.data
+    data = pickle.loads(r)
 
-    endpoint_id = r['eid']
-    starting_dir = r['dir_path']
-    grouper = r['grouper']
-    transfer_token = r['Transfer']
-    auth_token = r['Authorization']
+    repo_type = data["repo_type"]
 
-    print(f"Received Transfer Token: {transfer_token}")
-
+    # crawl_id used for tracking crawls, extractions, search index ingestion.
     crawl_id = uuid4()
-    crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper)
-    tc = crawler.get_transfer()
-    crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
-    crawl_thread.start()
+
+    # TODO: Add this to the notebooks.
+    print(repo_type)
+
+    if repo_type=="GLOBUS":
+        endpoint_id = r['eid']
+        starting_dir = r['dir_path']
+        grouper = r['grouper']
+        transfer_token = r['Transfer']
+        auth_token = r['Authorization']
+
+        print(f"Received Transfer Token: {transfer_token}")
+
+        crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper)
+        tc = crawler.get_transfer()
+        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
+        crawl_thread.start()
+
+    elif repo_type=="GDRIVE":
+        # If using Google Drive, we must receive credentials file containing user's Auth info.
+        gdrive_data = request.data
+        creds = data["auth_creds"]
+        crawler = GoogleDriveCrawler(crawl_id, creds[0])
+        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
+        crawl_thread.start()
+
+    else:
+        return {"crawl_id": str(crawl_id),
+                "message": "Error: Repo must be of type 'GLOBUS' or 'GDRIVE'. "}, status.HTTP_400_BAD_REQUEST
 
     crawler_dict[str(crawl_id)] = crawler
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
 
-@application.route('/crawl_gdrive', methods=["POST"])
-def crawl_gdrive():
-    r = request.data
-
-    creds = pickle.loads(r)[0]
-
-    print(creds)
-
-    service = generate_drive_connection(creds)
-    file_mdata = crawl(service)
-
-    return file_mdata
+# @application.route('/crawl_gdrive', methods=["POST"])
+# def crawl_gdrive():
+#     r = request.data
+#
+#     creds = pickle.loads(r)[0]
+#
+#     print(creds)
+#
+#     service = generate_drive_connection(creds)
+#     file_mdata = crawl(service)
+#
+#     return file_mdata
 
 
 @application.route('/get_crawl_status', methods=['GET'])
@@ -94,45 +115,6 @@ def get_status():
 
     else:
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
-
-
-def get_next_page(service, nextPageToken):
-    results = service.files().list(
-        pageSize=1000, pageToken=nextPageToken,
-        fields="nextPageToken, files(id, name, size, mimeType, fullFileExtension)").execute()
-
-    return results
-
-
-def crawl(service):
-    all_files = []
-    nextPageToken = None
-    print("CRAWLING")
-
-    while True:
-
-        if not nextPageToken:
-
-            # Call the Drive v3 API
-            results = get_next_page(service, None)
-
-        else:
-            results = get_next_page(service, nextPageToken)
-
-        items = results.get('files', [])
-        nextPageToken = results.get("nextPageToken", [])
-        all_files.extend(items)
-
-        # TODO: Do I need to break before this point?
-        if len(items) < 1000 or not items:
-            print('Time to break... or no files found')
-            print(f"Total files processed: {len(all_files)}")
-            return {"file_mdata": all_files}
-
-
-def generate_drive_connection(creds):
-    service = build('drive', 'v3', credentials=creds)
-    return service
 
 
 if __name__ == '__main__':
