@@ -47,3 +47,4 @@ class GoogleDriveCrawler(Crawler):
                 # TODO: this should return, but should probably enqueue (same as Globus HTTPS crawler)
                 # return {"file_mdata": all_files, "crawl_id": self.crawl_id}
                 self.crawl_status = "SUCCEEDED"
+                break
