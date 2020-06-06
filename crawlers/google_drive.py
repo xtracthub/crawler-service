@@ -19,6 +19,8 @@ class GoogleDriveCrawler(Crawler):
         self.drive_conn = generate_drive_connection(self.creds)
         print("Connection to Drive API successful!")
 
+        self.crawl_status = "STARTING"
+
     def crawl(self, tc=None):  # TODO: Find clean way to remove transfer_client requirement from .crawl() function.
         # TODO: Properly generate the queues for these.
         all_files = []
@@ -43,4 +45,5 @@ class GoogleDriveCrawler(Crawler):
                 print('Time to break... or no files found')
                 print(f"Total files processed: {len(all_files)}")
                 # TODO: this should return, but should probably enqueue (same as Globus HTTPS crawler)
-                return {"file_mdata": all_files, "crawl_id": self.crawl_id}
+                # return {"file_mdata": all_files, "crawl_id": self.crawl_id}
+                self.crawl_status = "SUCCEEDED"

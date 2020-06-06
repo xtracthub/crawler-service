@@ -394,6 +394,8 @@ class GlobusCrawler(Crawler):
             t.join()
         print("COMMIT SUCCESSFULLY ENDED!")
 
+        self.crawl_status = "SUCCEEDED"
+
         t_end = time.time()
 
         print(f"TOTAL TIME: {t_end-t_start}")
