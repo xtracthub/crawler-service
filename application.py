@@ -66,7 +66,7 @@ def crawl_repo():
 
     elif repo_type=="GDRIVE":
         # If using Google Drive, we must receive credentials file containing user's Auth info.
-        gdrive_data = request.data
+        # gdrive_data = request.data
         creds = data["auth_creds"]
         crawler = GoogleDriveCrawler(crawl_id, creds[0])
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
@@ -121,6 +121,7 @@ def fetch_mdata():
     # TODO: Step 3. Remove it.
 
     return {"crawl_id": str(crawl_id), "metadata": mdata}
+
 
 if __name__ == '__main__':
     application.run(debug=True, threaded=True)
