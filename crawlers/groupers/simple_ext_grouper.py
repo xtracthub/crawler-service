@@ -30,7 +30,7 @@ class SimpleExtensionGrouper:
         for fdict in file_ls:
             valid_mapping = False
             for mapping in mappings:
-                if fdict['extension'] in mappings[mapping]:
+                if fdict['extension'].lower() in mappings[mapping]:
                     # TODO: this will eventually need to be a list of extractors.
                     fdict['extractor'] = mapping  # mapping = extractor_name!
                     valid_mapping = True

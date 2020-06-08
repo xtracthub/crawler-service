@@ -104,7 +104,6 @@ class GoogleDriveCrawler(Crawler):
         starting = True
 
         grouper = simple_ext_grouper.SimpleExtensionGrouper()
-        file_count = 0
 
         while True:
 
@@ -122,10 +121,6 @@ class GoogleDriveCrawler(Crawler):
             clean_mdata = self.gdrive_mdata_cleaner(items)
             all_files.extend(clean_mdata)
 
-            for item in clean_mdata:
-                self.families_to_enqueue.put({"Id": str(file_count), "MessageBody": json.dumps(item)})
-                file_count += 1
-
             self.count_files_crawled += len(items)
 
             if not next_page_token and not starting:
@@ -138,6 +133,12 @@ class GoogleDriveCrawler(Crawler):
 
         print("Running grouper...")
         grouped_mdata = grouper.gen_groups(all_files)
+
+        file_count = 0
+        # TODO: Might want to put this above so it happens smoothly DURING processing.
+        for item in grouped_mdata:
+            self.families_to_enqueue.put({"Id": str(file_count), "MessageBody": json.dumps(item)})
+            file_count += 1
 
         print("SUCCESSFULLY GROUPED METADATA!")
 
@@ -159,7 +160,6 @@ class GoogleDriveCrawler(Crawler):
                 print(t)
                 raise ValueError
         print(f"Text: {text_tally}\nTabular: {tab_tally}\nImages: {im_tally}\nNone: {none_tally}")
-
 
     def gdrive_mdata_cleaner(self, results_ls):
 
