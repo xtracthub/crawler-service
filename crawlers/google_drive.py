@@ -28,6 +28,9 @@ class GoogleDriveCrawler(Crawler):
         self.commit_threads = 5
         self.families_to_enqueue = Queue()
 
+        self.numdocs = 0
+        self.numfiles = 0
+
         print("Generating connection to Google Drive API...")
         self.drive_conn = generate_drive_connection(self.creds)
         print("Connection to Drive API successful!")
@@ -161,13 +164,22 @@ class GoogleDriveCrawler(Crawler):
                 raise ValueError
         print(f"Text: {text_tally}\nTabular: {tab_tally}\nImages: {im_tally}\nNone: {none_tally}")
 
+        print(f"Google docs: {self.numdocs}")
+        print(f"Regular files: {self.numfiles}")
+
     def gdrive_mdata_cleaner(self, results_ls):
 
         new_ls = []
         for res in results_ls:
-            if 'size' not in res:
+            if 'webContentLink' not in res:
                 res['size'] = 0
                 res['is_gdoc'] = True
+                self.numdocs += 1
+            else:
+                self.numfiles += 1
+                res['is_gdoc'] = False
+                del res['webContentLink']
+
 
             shared_peeps = []
             res['user_is_owner'] = False
