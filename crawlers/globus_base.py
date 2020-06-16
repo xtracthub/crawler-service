@@ -57,6 +57,8 @@ class GlobusCrawler(Crawler):
         self.max_crawl_threads = max_crawl_threads
         self.families_to_enqueue = Queue()
 
+        self.fam_count = 0
+
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
         self.count_bytes_crawled = 0
@@ -134,7 +136,7 @@ class GlobusCrawler(Crawler):
                 self.active_commits -= 1
                 current_batch += 1
 
-            print(f"Insertables: {insertables}")
+            # print(f"Insertables: {insertables}")
 
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
@@ -295,7 +297,7 @@ class GlobusCrawler(Crawler):
                 f_names = []
                 for entry in dir_contents:
 
-                    full_path = cur_dir + "/" + entry['name']
+                    full_path = os.path.join(cur_dir, entry['name'])
                     if entry['type'] == 'file':
 
                         f_names.append(full_path)
@@ -314,29 +316,33 @@ class GlobusCrawler(Crawler):
 
                 # For all families
                 for family in families:
-
                     tracked_files = set()
                     num_file_count = 0
                     num_bytes_count = 0
 
-                    groups = families[family]["groups"]
+                    groups = family["groups"]
 
                     fam_file_metadata = {}
 
-                    for filename in families[family]["files"]:
+                    # print(f"ALL FILE MDATA: {all_file_mdata}")
+                    for filename in family["files"]:
+                        # filename = filename.replace("//", "/")
                         fam_file_metadata[filename] = all_file_mdata[filename]
 
-                    families[family]["files"] = fam_file_metadata
-                    families[family]["family_id"] = family
+                    family["files"] = fam_file_metadata
+                    # family["family_id"] = family
 
                     # For all groups in the family
+                    print(f"Len files in family: {len(family['files'])}")
                     for group in groups:
                         self.count_groups_crawled += 1
-                        parser = groups[group]["parser"]
+                        parser = group["parser"]
                         logging.debug(f"Parser: {parser}")
 
                         gr_id = group
-                        file_list = groups[group]["files"]
+                        file_list = group["files"]
+
+                        print(f"Len files in group: {len(file_list)}")
 
                         for f in file_list:
 
@@ -350,7 +356,8 @@ class GlobusCrawler(Crawler):
                         self.active_commits += 1
                         self.group_count += 1
 
-                    self.families_to_enqueue.put({"Id": str(self.group_count), "MessageBody": json.dumps(families[family])})
+                    self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(family)})
+                    self.fam_count += 1
 
             except TransferAPIError as e:
                 file_logger.error("Problem directory {}".format(cur_dir))

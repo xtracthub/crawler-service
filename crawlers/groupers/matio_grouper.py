@@ -55,6 +55,7 @@ class MatIOGrouper:
         gr.clear()
 
         # So at this point, conn_comps is all files that must travel together.
+        # TODO: Why are non-connected
         return conn_comps
 
     def pack_groups(self, conn_comps, file_groups_map, group_files_map, strategy='minimum'):
@@ -64,13 +65,15 @@ class MatIOGrouper:
         """
         # Generate a unique identifier for each 'family' of groups (e.g., groups that must travel together).
 
-        families = {}
+        families = []
         for comp in conn_comps:
+
+            print(f"Len of connected component: {len(comp)}")
 
             family_uuid = str(uuid4())
 
             # Create a new family with a fresh UUID.
-            families[family_uuid] = {"files": [], "groups": {}}
+            family = {"family_id": family_uuid, "files": [], "groups": []}
 
             # Note here that every filename in the comp is associated with a single family id.
             for filename in comp:
@@ -79,12 +82,13 @@ class MatIOGrouper:
                 # self.logger.debug(f"All groups containing file {filename}: {gr_ids}")
 
                 # Add to the cumulative list of unique files across all groups in a family.
-                families[family_uuid]["files"].append(filename)
+                family["files"].append(filename)
 
                 for gr_id in gr_ids:
-
                     # print(f"ASSOCIATED FILES: {group_files_map[gr_id]}")
-                    families[family_uuid]["groups"][gr_id] = group_files_map[gr_id]
+                    gr_info = group_files_map[gr_id]
+                    family["groups"].append({"group_id": gr_id, "parser": gr_info["parser"], "files": gr_info["files"]})
+            families.append(family)
         return families
 
     def group(self, file_ls):
@@ -141,7 +145,8 @@ class MatIOGrouper:
         t_group_pack_end = time.time()
 
         self.logger.info(f"Total time to pack groups: {t_group_pack_end - t_graph_start}")
-
         self.logger.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
+        print(f"Length of families: {len(families)}")
+        print(f"One family: {families[0]}")
         return families

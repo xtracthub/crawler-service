@@ -38,11 +38,13 @@ def hello():
 
 @application.route('/crawl', methods=['POST'])
 def crawl_repo():
+    r = request.json
+    # r = request.data
+    # TODO: bring back unpickling for Google.
+    # print(type(data))
+    # data = pickle.loads(r)
 
-    r = request.data
-    data = pickle.loads(r)
-
-    repo_type = data["repo_type"]
+    repo_type = r["repo_type"]
 
     # crawl_id used for tracking crawls, extractions, search index ingestion.
     crawl_id = uuid4()
@@ -50,7 +52,7 @@ def crawl_repo():
     # TODO: Add this to the notebooks.
     print(repo_type)
 
-    if repo_type=="GLOBUS":
+    if repo_type == "GLOBUS":
         endpoint_id = r['eid']
         starting_dir = r['dir_path']
         grouper = r['grouper']
@@ -64,7 +66,7 @@ def crawl_repo():
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
         crawl_thread.start()
 
-    elif repo_type=="GDRIVE":
+    elif repo_type == "GDRIVE":
         # If using Google Drive, we must receive credentials file containing user's Auth info.
         # gdrive_data = request.data
         creds = data["auth_creds"]
