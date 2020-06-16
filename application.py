@@ -61,7 +61,11 @@ def crawl_repo():
 
         print(f"Received Transfer Token: {transfer_token}")
 
-        crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper)
+        base_url=None
+        if 'https_info' in r:
+            base_url = r['https_info']['base_url']
+
+        crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper, base_url=base_url)
         tc = crawler.get_transfer()
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
         crawl_thread.start()
