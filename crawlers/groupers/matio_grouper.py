@@ -68,12 +68,12 @@ class MatIOGrouper:
         families = []
         for comp in conn_comps:
 
-            print(f"Len of connected component: {len(comp)}")
+            # print(f"Len of connected component: {len(comp)}")
 
             family_uuid = str(uuid4())
 
             # Create a new family with a fresh UUID.
-            family = {"family_id": family_uuid, "files": [], "groups": []}
+            family = {"family_id": family_uuid, "files": [], "groups": [], "extractor": "matio"}
 
             # Note here that every filename in the comp is associated with a single family id.
             for filename in comp:

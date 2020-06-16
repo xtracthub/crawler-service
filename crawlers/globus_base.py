@@ -41,9 +41,10 @@ overall_logger.addHandler(stream_handler)
 
 class GlobusCrawler(Crawler):
 
-    def __init__(self, eid, path, crawl_id, trans_token, auth_token, grouper_name=None, logging_level='debug'):
+    def __init__(self, eid, path, crawl_id, trans_token, auth_token, grouper_name=None, logging_level='debug', base_url=None):
         Crawler.__init__(self)
         self.path = path
+        self.base_url = base_url  # TODO
         self.eid = eid
         self.group_count = 0
         self.transfer_token = trans_token
@@ -300,6 +301,9 @@ class GlobusCrawler(Crawler):
                     full_path = os.path.join(cur_dir, entry['name'])
                     if entry['type'] == 'file':
 
+                        full_url = f"{self.base_url}{full_path}"
+                        print(full_url)
+
                         f_names.append(full_path)
                         extension = self.get_extension(entry["name"])
 
@@ -308,7 +312,6 @@ class GlobusCrawler(Crawler):
                                                                   "extension": extension, "path_type": "globus"}}
 
                     elif entry["type"] == "dir":
-                        full_path = cur_dir + "/" + entry['name']
                         self.to_crawl.put(full_path)
 
                 #  We want to process each potential group of files.
@@ -330,10 +333,11 @@ class GlobusCrawler(Crawler):
                         fam_file_metadata[filename] = all_file_mdata[filename]
 
                     family["files"] = fam_file_metadata
+                    family["base_url"] = self.base_url
                     # family["family_id"] = family
 
                     # For all groups in the family
-                    print(f"Len files in family: {len(family['files'])}")
+                    # print(f"Len files in family: {len(family['files'])}")
                     for group in groups:
                         self.count_groups_crawled += 1
                         parser = group["parser"]
@@ -342,7 +346,7 @@ class GlobusCrawler(Crawler):
                         gr_id = group
                         file_list = group["files"]
 
-                        print(f"Len files in group: {len(file_list)}")
+                        # print(f"Len files in group: {len(file_list)}")
 
                         for f in file_list:
 
