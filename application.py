@@ -49,9 +49,6 @@ def crawl_repo():
     # crawl_id used for tracking crawls, extractions, search index ingestion.
     crawl_id = uuid4()
 
-    # TODO: Add this to the notebooks.
-    print(repo_type)
-
     if repo_type == "GLOBUS":
         endpoint_id = r['eid']
         starting_dir = r['dir_path']
@@ -61,7 +58,7 @@ def crawl_repo():
 
         print(f"Received Transfer Token: {transfer_token}")
 
-        base_url=None
+        base_url = None
         if 'https_info' in r:
             base_url = r['https_info']['base_url']
 

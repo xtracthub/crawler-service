@@ -274,6 +274,7 @@ class GlobusCrawler(Crawler):
 
                     except GlobusTimeoutError as e:
                         file_logger.error("Globus Timeout Error -- retrying")
+
                         logging.info(e)
                         print(e)
                         pass
