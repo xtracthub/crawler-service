@@ -90,13 +90,14 @@ class GoogleDriveCrawler(Crawler):
                 current_batch += 1
 
             print(f"Insertables: {insertables}")
+            # TODO: Uncomment
+            # print("[COMMIT] Preparing batch commit -- executing!")
 
-            print("[COMMIT] Preparing batch commit -- executing!")
 
             try:
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
-                print(f"SQS response: {response}")
+                # print(f"SQS response: {response}")
             except Exception as e:  # TODO: too vague
                 print(f"WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE: {e}")
 
@@ -106,7 +107,7 @@ class GoogleDriveCrawler(Crawler):
         next_page_token = None
         starting = True
 
-        grouper = simple_ext_grouper.SimpleExtensionGrouper()
+        grouper = simple_ext_grouper.SimpleExtensionGrouper(creds=self.creds)
 
         while True:
 
@@ -135,7 +136,7 @@ class GoogleDriveCrawler(Crawler):
                 break
 
         print("Running grouper...")
-        grouped_mdata = grouper.gen_groups(all_files)
+        grouped_mdata = grouper.gen_families(all_files)
 
         file_count = 0
         # TODO: Might want to put this above so it happens smoothly DURING processing.
@@ -149,20 +150,23 @@ class GoogleDriveCrawler(Crawler):
         im_tally = 0
         tab_tally = 0
         none_tally = 0
-        for item in grouped_mdata:
-            t = item["extractor"]
-            if t == "text":
-                text_tally += 1
-            elif t == "tabular":
-                tab_tally += 1
-            elif t == "images":
-                im_tally += 1
-            elif t == None:
-                none_tally += 1
-            else:
-                print(t)
-                raise ValueError
-        print(f"Text: {text_tally}\nTabular: {tab_tally}\nImages: {im_tally}\nNone: {none_tally}")
+        try:
+            for item in grouped_mdata:
+                t = item["extractor"]
+                if t == "text":
+                    text_tally += 1
+                elif t == "tabular":
+                    tab_tally += 1
+                elif t == "images":
+                    im_tally += 1
+                elif t == None:
+                    none_tally += 1
+                else:
+                    print(t)
+                    raise ValueError
+            print(f"Text: {text_tally}\nTabular: {tab_tally}\nImages: {im_tally}\nNone: {none_tally}")
+        except Exception as e:
+            print(e)
 
         print(f"Google docs: {self.numdocs}")
         print(f"Regular files: {self.numfiles}")
@@ -179,7 +183,6 @@ class GoogleDriveCrawler(Crawler):
                 self.numfiles += 1
                 res['is_gdoc'] = False
                 del res['webContentLink']
-
 
             shared_peeps = []
             res['user_is_owner'] = False

@@ -1,10 +1,15 @@
 
+from xtract_sdk.packagers.family import Family
+
 
 class SimpleExtensionGrouper:
-    def __init__(self, by_file=True, logger=None):
+    def __init__(self, creds, by_file=True, logger=None):
         self.logger = logger
         self.by_file = True
         self.max_bytes = 1073741824  # 1 GB
+
+        # TODO: Eventually we want to add creds here, but for now we re-inject at Orchestration.
+        self.creds = creds
 
     # TODO: Create a 'mappings' file that just contains a bunch of these sets.
     def get_mappings(self):
@@ -18,17 +23,21 @@ class SimpleExtensionGrouper:
 
         return {"text": text_types, "tabular": tabular_types, "images": image_types}
 
-    def gen_groups(self, file_ls):
-        """Given list of metadata dicts, output updated list of extractors """
+    def gen_families(self, file_ls):
+        """Given list of metadata dicts, output updated list of extractors
+
+            NOTE FOR THIS GROUPER :: 1 file = 1 family = 1 group = 1 file """
         if not self.by_file:
             raise ValueError("Unable to process groups of more than 1 file by extension!")
 
-        new_ls = []
+        families = []
 
         mappings = self.get_mappings()
 
         for fdict in file_ls:
+            groups = []
             valid_mapping = False
+            mimeType = None
             for mapping in mappings:
                 if fdict['extension'].lower() in mappings[mapping]:
                     # TODO: this will eventually need to be a list of extractors.
@@ -48,6 +57,17 @@ class SimpleExtensionGrouper:
                     # Now we default to None
                     fdict['extractor'] = None
 
-            new_ls.append(fdict)
+            groups.append(fdict)
 
-        return new_ls
+            # Here we will use the Xtract family object
+            family = Family(download_type="gdrive")
+
+            family.add_group(files=[{"path": fdict["id"],
+                                     "metadata": fdict,
+                                     "is_gdoc": fdict["is_gdoc"],
+                                     "mimeType": mimeType}],
+                             parser=fdict["extractor"])
+
+            families.append(family.to_dict())
+
+        return families

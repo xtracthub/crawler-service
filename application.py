@@ -22,8 +22,6 @@ application = Flask(__name__)
 crawler_dict = {}
 
 log = logging.getLogger('werkzeug')
-# log.disabled = True
-# application.logger.disabled = True
 
 
 def crawl_launch(crawler, tc):
@@ -38,13 +36,15 @@ def hello():
 
 @application.route('/crawl', methods=['POST'])
 def crawl_repo():
-    r = request.json
-    # r = request.data
+    # r = request.json
+    r = request.data
     # TODO: bring back unpickling for Google.
-    # print(type(data))
-    # data = pickle.loads(r)
-
-    repo_type = r["repo_type"]
+    try:
+        data = pickle.loads(r)
+        repo_type = data["repo_type"]
+    except pickle.UnpicklingError as e:
+        print(f"Tried and failed to unpickle! Caught: {e}")
+        repo_type = r["repo_type"]
 
     # crawl_id used for tracking crawls, extractions, search index ingestion.
     crawl_id = uuid4()
@@ -69,7 +69,6 @@ def crawl_repo():
 
     elif repo_type == "GDRIVE":
         # If using Google Drive, we must receive credentials file containing user's Auth info.
-        # gdrive_data = request.data
         creds = data["auth_creds"]
         crawler = GoogleDriveCrawler(crawl_id, creds[0])
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
