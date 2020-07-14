@@ -12,6 +12,7 @@ from uuid import uuid4
 import threading
 import logging
 import pickle
+from boxsdk import OAuth2
 import os
 
 application = Flask(__name__)
@@ -41,15 +42,12 @@ def store_tokens(access_token, refresh_token):
         g.write(refresh_token)
 
 
-from boxsdk import OAuth2
-
 current_oauth = dict()
 current_oauth['base'] = OAuth2(
         client_id=os.environ["box_client_id"],
         client_secret=os.environ["box_client_secret"],
         store_tokens=store_tokens,
     )
-
 
 
 def crawl_launch(crawler, tc):

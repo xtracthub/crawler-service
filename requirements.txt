@@ -22,4 +22,5 @@ pyDrive
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
-xtract_sdk
+xtract_sdk==0.0.5
+boxsdk
