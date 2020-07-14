@@ -1,6 +1,7 @@
 
-from flask import Flask, request
+from flask import Flask, request, redirect
 from flask_api import status
+from boxsdk import Client
 
 # Import each of our crawlers.
 from crawlers.globus_base import GlobusCrawler
@@ -11,6 +12,7 @@ from uuid import uuid4
 import threading
 import logging
 import pickle
+import os
 
 application = Flask(__name__)
 
@@ -21,7 +23,33 @@ application = Flask(__name__)
 
 crawler_dict = {}
 
+box_creds = dict()
+
 log = logging.getLogger('werkzeug')
+
+
+def store_tokens(access_token, refresh_token):
+
+    cwd = os.getcwd()
+    xtract_box_path = os.path.join(cwd, '.xtract_box/tyler/')
+    print(xtract_box_path)
+
+    os.makedirs(f'{xtract_box_path}', exist_ok=True)
+    with open(f'{xtract_box_path}access_token', 'w') as f:
+        f.write(access_token)
+    with open(f'{xtract_box_path}refresh_token', 'w') as g:
+        g.write(refresh_token)
+
+
+from boxsdk import OAuth2
+
+current_oauth = dict()
+current_oauth['base'] = OAuth2(
+        client_id=os.environ["box_client_id"],
+        client_secret=os.environ["box_client_secret"],
+        store_tokens=store_tokens,
+    )
+
 
 
 def crawl_launch(crawler, tc):
@@ -74,6 +102,7 @@ def crawl_repo():
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
         crawl_thread.start()
 
+
     else:
         return {"crawl_id": str(crawl_id),
                 "message": "Error: Repo must be of type 'GLOBUS' or 'GDRIVE'. "}, status.HTTP_400_BAD_REQUEST
@@ -81,6 +110,64 @@ def crawl_repo():
     crawler_dict[str(crawl_id)] = crawler
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
+
+
+@application.route('/auth_box', methods=['GET', 'POST'])
+def auth_box():
+
+    auth_url, csrf_token = current_oauth['base'].get_authorization_url('http://127.0.0.1:5000/get_token')
+
+    # with open()
+
+    # First we check to see if access and refresh tokens
+    # TODO: enable auth from refresh token.
+    # oauth = OAuth2(
+    #     client_id=os.environ["box_client_access"],
+    #     client_secret=os.environ["box_client_secret"],
+    #     access_token='ACCESS_TOKEN',
+    #     refresh_token='REFRESH_TOKEN',
+    # )
+
+    return redirect(auth_url, code=302)
+
+
+@application.route('/get_token', methods=['GET', 'POST'])
+def get_token():
+    auth_code = request.args.get('code')
+    oauth.authenticate(auth_code)
+
+    client = Client(oauth)
+
+    user = client.user().get()
+
+    box_creds[user.id] = client
+
+    print(f"Box creds: {box_creds}")
+
+    print("The current user is {0}".format(user.id))
+
+    return "The current user is {0}. You may shut this page! ".format(user.id)
+
+
+@application.route('/crawl_box', methods=['POST', 'GET'])
+def crawl_box():
+    #r = request.json
+    #user_id = int(r["user_id"])
+
+    user_id = '1425958733'
+
+    print(f"Box Creds 2: {box_creds}")
+
+    if user_id in box_creds:  # TODO: how do we know if auth is stale?
+        client = box_creds[user_id]
+
+    else:
+        return {"error": "Error fetching saved auth token. Please Auth again"}
+
+    root_folder = client.folder(folder_id='112657269903').get()
+
+    print(root_folder)
+    return root_folder.id
 
 
 @application.route('/get_crawl_status', methods=['GET'])
@@ -123,6 +210,7 @@ def fetch_mdata():
     # TODO: Step 3. Remove it.
 
     return {"crawl_id": str(crawl_id), "metadata": mdata}
+
 
 
 if __name__ == '__main__':
