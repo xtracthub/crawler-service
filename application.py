@@ -1,7 +1,7 @@
 
 from flask import Flask, request, redirect
 from flask_api import status
-from boxsdk import Client
+# from boxsdk import Client
 
 # Import each of our crawlers.
 from crawlers.globus_base import GlobusCrawler
@@ -41,13 +41,13 @@ def store_tokens(access_token, refresh_token):
     with open(f'{xtract_box_path}refresh_token', 'w') as g:
         g.write(refresh_token)
 
-
-current_oauth = dict()
-current_oauth['base'] = OAuth2(
-        client_id=os.environ["box_client_id"],
-        client_secret=os.environ["box_client_secret"],
-        store_tokens=store_tokens,
-    )
+# TODO: bring back. 
+# current_oauth = dict()
+# current_oauth['base'] = OAuth2(
+#         client_id=os.environ["box_client_id"],
+#         client_secret=os.environ["box_client_secret"],
+#         store_tokens=store_tokens,
+#     )
 
 
 def crawl_launch(crawler, tc):
