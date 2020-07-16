@@ -115,6 +115,7 @@ class GoogleDriveCrawler(Crawler):
 
         grouper = simple_ext_grouper.SimpleExtensionGrouper(creds=self.creds)
 
+        self.crawl_status = "PROCESSING"
         while True:
 
             if not next_page_token and starting:

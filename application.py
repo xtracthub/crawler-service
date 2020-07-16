@@ -189,7 +189,7 @@ def get_status():
         groups_crawled = crawler_dict[crawl_id].count_groups_crawled
 
         status_mdata = {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
-                'bytes_crawled': bytes_crawled, 'group_crawled': groups_crawled}
+                'bytes_crawled': bytes_crawled, 'groups_crawled': groups_crawled}
     else:
         files_crawled = 0
         status_mdata = {}
@@ -206,6 +206,7 @@ def get_status():
         status_mdata["crawl_start_t"] = crawler.crawl_start
         status_mdata["crawl_status"] = crawler.crawl_status
         status_mdata["n_commit_threads"] = crawler.commit_threads
+        status_mdata["groups_crawled"] = files_crawled
 
         if crawler.crawl_status == "COMPLETED":
             status_mdata["crawl_end_t"] = crawler.crawl_end
