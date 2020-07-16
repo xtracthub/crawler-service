@@ -19,9 +19,12 @@ class GoogleDriveCrawler(Crawler):
         self.creds = creds
         self.grouper_name = grouper_name
 
-        self.count_groups_crawled = 0
+        # self.count_groups_crawled = 0
         self.count_files_crawled = 0
-        self.count_bytes_crawled = 0
+        self.count_bytes_crawled = None
+        self.count_groups_crawled = self.count_files_crawled
+
+        self.crawl_tallies = None
 
         self.active_commits = 0
 
@@ -30,6 +33,9 @@ class GoogleDriveCrawler(Crawler):
 
         self.numdocs = 0
         self.numfiles = 0
+
+        self.crawl_start = time.time()
+        self.crawl_end = None
 
         print("Generating connection to Google Drive API...")
         self.drive_conn = generate_drive_connection(self.creds)
@@ -60,7 +66,6 @@ class GoogleDriveCrawler(Crawler):
 
     def enqueue_loop(self, thr_id):
 
-        files_commited = 0
         print("In enqueue loop!")
         while True:
             insertables = []
@@ -76,7 +81,8 @@ class GoogleDriveCrawler(Crawler):
                     # NOW if all threads idle, then return!
                     if all(value == "IDLE" for value in self.sqs_push_threads.values()):
                         self.commit_completed = True
-                        self.crawl_status = "SUCCESS"
+                        self.crawl_status = "COMPLETED"
+                        self.crawl_end = time.time()
                         print(f"Thread {thr_id} is terminating!")
                         return 0
                 time.sleep(1)
@@ -91,13 +97,13 @@ class GoogleDriveCrawler(Crawler):
                 self.active_commits -= 1
                 current_batch += 1
 
-            print(f"Insertables: {insertables}")
+            # print(f"Insertables: {insertables}")
 
 
             try:
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
-                print(f"SQS response: {response}")
+               # print(f"SQS response: {response}")
             except Exception as e:  # TODO: too vague
                 print(f"WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE: {e}")
 
@@ -136,7 +142,9 @@ class GoogleDriveCrawler(Crawler):
                 break
 
         print("Running grouper...")
-        grouped_mdata = grouper.gen_families(all_files)
+        grouped_mdata, tallies = grouper.gen_families(all_files)
+        self.crawl_tallies = tallies
+        print(f"Tallies: {tallies}")
 
         file_count = 0
         # TODO: Might want to put this above so it happens smoothly DURING processing.
@@ -145,28 +153,6 @@ class GoogleDriveCrawler(Crawler):
             file_count += 1
 
         print("SUCCESSFULLY GROUPED METADATA!")
-
-        text_tally = 0
-        im_tally = 0
-        tab_tally = 0
-        none_tally = 0
-        try:
-            for item in grouped_mdata:
-                t = item["extractor"]
-                if t == "text":
-                    text_tally += 1
-                elif t == "tabular":
-                    tab_tally += 1
-                elif t == "images":
-                    im_tally += 1
-                elif t == None:
-                    none_tally += 1
-                else:
-                    print(t)
-                    raise ValueError
-            print(f"Text: {text_tally}\nTabular: {tab_tally}\nImages: {im_tally}\nNone: {none_tally}")
-        except Exception as e:
-            print(e)
 
         print(f"Google docs: {self.numdocs}")
         print(f"Regular files: {self.numfiles}")

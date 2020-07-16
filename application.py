@@ -88,7 +88,13 @@ def crawl_repo():
         if 'https_info' in r:
             base_url = r['https_info']['base_url']
 
-        crawler = GlobusCrawler(endpoint_id, starting_dir, crawl_id, transfer_token, auth_token, grouper, base_url=base_url)
+        crawler = GlobusCrawler(endpoint_id,
+                                starting_dir,
+                                crawl_id,
+                                transfer_token,
+                                auth_token,
+                                grouper,
+                                base_url=base_url)
         tc = crawler.get_transfer()
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
         crawl_thread.start()
@@ -99,7 +105,6 @@ def crawl_repo():
         crawler = GoogleDriveCrawler(crawl_id, creds[0])
         crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
         crawl_thread.start()
-
 
     else:
         return {"crawl_id": str(crawl_id),
@@ -183,8 +188,30 @@ def get_status():
         bytes_crawled = crawler_dict[crawl_id].count_bytes_crawled
         groups_crawled = crawler_dict[crawl_id].count_groups_crawled
 
-        return {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
+        status_mdata = {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
                 'bytes_crawled': bytes_crawled, 'group_crawled': groups_crawled}
+    else:
+        files_crawled = 0
+        status_mdata = {}
+
+    crawler = crawler_dict[crawl_id]
+    if isinstance(crawler, GoogleDriveCrawler):
+        status_mdata["repo_type"] = "GDrive"
+
+        type_tally = crawler.crawl_tallies
+        num_is_gdoc = crawler.numdocs
+        num_is_user_upload = files_crawled - num_is_gdoc
+        status_mdata["gdrive_mdata"] = {'first_ext_tallies': type_tally, 'doc_types': {"is_gdoc": num_is_gdoc,
+                                                                                       "is_user_upload": num_is_user_upload}}
+        status_mdata["crawl_start_t"] = crawler.crawl_start
+        status_mdata["crawl_status"] = crawler.crawl_status
+        status_mdata["n_commit_threads"] = crawler.commit_threads
+
+        if crawler.crawl_status == "COMPLETED":
+            status_mdata["crawl_end_t"] = crawler.crawl_end
+            status_mdata["total_crawl_time"] = crawler.crawl_end - crawler.crawl_start
+
+        return status_mdata
 
     else:
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}

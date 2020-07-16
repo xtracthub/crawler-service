@@ -8,6 +8,7 @@ class SimpleExtensionGrouper:
         self.by_file = True
         self.max_bytes = 1073741824  # 1 GB
 
+
         # TODO: Eventually we want to add creds here, but for now we re-inject at Orchestration.
         self.creds = creds
 
@@ -24,6 +25,9 @@ class SimpleExtensionGrouper:
         return {"text": text_types, "tabular": tabular_types, "images": image_types}
 
     def gen_families(self, file_ls):
+
+        crawl_tallies = {"text": 0, "tabular": 0, "images": 0, "presentation": 0, "other": 0}
+
         """Given list of metadata dicts, output updated list of extractors
 
             NOTE FOR THIS GROUPER :: 1 file = 1 family = 1 group = 1 file """
@@ -47,23 +51,29 @@ class SimpleExtensionGrouper:
                     valid_mapping = True
                     mimeType = fdict["mimeType"]
 
+                    crawl_tallies[mapping] += 1
+
             if not valid_mapping:
                 mimeType = fdict["mimeType"]
                 if 'vnd.google-apps.document' in mimeType:
                     fdict['extractor'] = "text"
                     mimeType = "text/plain"
+                    crawl_tallies["text"] += 1
                 elif 'vnd.google-apps.spreadsheet' in mimeType:
                     fdict['extractor'] = "tabular"
                     mimeType = "text/csv"
+                    crawl_tallies['tabular'] += 1
                 elif 'vnd.google-apps.presentation' in mimeType:
                     # fdict['extractor'] = "text"  # TODO: this should come back soon.
                     fdict['extractor'] = None
                     mimeType = None
+                    crawl_tallies['presentation'] += 1
                     # TODO from Will: " slides: text, tabular, images, BERT... order is not important"
                 else:
                     # Now we default to None
                     fdict['extractor'] = None
                     mimeType = None
+                    crawl_tallies['other'] += 1
 
             groups.append(fdict)
 
@@ -78,4 +88,4 @@ class SimpleExtensionGrouper:
 
             families.append(family.to_dict())
 
-        return families
+        return families, crawl_tallies
