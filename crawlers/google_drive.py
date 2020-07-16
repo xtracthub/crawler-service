@@ -60,6 +60,8 @@ class GoogleDriveCrawler(Crawler):
 
     def enqueue_loop(self, thr_id):
 
+        files_commited = 0
+        print("In enqueue loop!")
         while True:
             insertables = []
 
@@ -90,14 +92,12 @@ class GoogleDriveCrawler(Crawler):
                 current_batch += 1
 
             print(f"Insertables: {insertables}")
-            # TODO: Uncomment
-            # print("[COMMIT] Preparing batch commit -- executing!")
 
 
             try:
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
-                # print(f"SQS response: {response}")
+                print(f"SQS response: {response}")
             except Exception as e:  # TODO: too vague
                 print(f"WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE: {e}")
 

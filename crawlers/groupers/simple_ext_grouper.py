@@ -35,27 +35,35 @@ class SimpleExtensionGrouper:
         mappings = self.get_mappings()
 
         for fdict in file_ls:
+
             groups = []
             valid_mapping = False
             mimeType = None
             for mapping in mappings:
+
                 if fdict['extension'].lower() in mappings[mapping]:
                     # TODO: this will eventually need to be a list of extractors.
                     fdict['extractor'] = mapping  # mapping = extractor_name!
                     valid_mapping = True
+                    mimeType = fdict["mimeType"]
 
             if not valid_mapping:
-                mimetype = fdict["mimeType"]
-                if 'vnd.google-apps.document' in mimetype:
+                mimeType = fdict["mimeType"]
+                if 'vnd.google-apps.document' in mimeType:
                     fdict['extractor'] = "text"
-                elif 'vnd.google-apps.spreadsheet' in mimetype:
+                    mimeType = "text/plain"
+                elif 'vnd.google-apps.spreadsheet' in mimeType:
                     fdict['extractor'] = "tabular"
-                elif 'vnd.google-apps.presentation' in mimetype:
-                    fdict['extractor'] = "text"
+                    mimeType = "text/csv"
+                elif 'vnd.google-apps.presentation' in mimeType:
+                    # fdict['extractor'] = "text"  # TODO: this should come back soon.
+                    fdict['extractor'] = None
+                    mimeType = None
                     # TODO from Will: " slides: text, tabular, images, BERT... order is not important"
                 else:
                     # Now we default to None
                     fdict['extractor'] = None
+                    mimeType = None
 
             groups.append(fdict)
 
