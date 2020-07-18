@@ -8,7 +8,6 @@ class SimpleExtensionGrouper:
         self.by_file = True
         self.max_bytes = 1073741824  # 1 GB
 
-
         # TODO: Eventually we want to add creds here, but for now we re-inject at Orchestration.
         self.creds = creds
 
@@ -22,7 +21,12 @@ class SimpleExtensionGrouper:
 
         image_types = {'jpg', 'jpeg', 'png', 'tiff', 'tif', 'gif', 'bmp'}
 
-        return {"text": text_types, "tabular": tabular_types, "images": image_types}
+        compressed_types = {'gz', 'tar', 'zip', '7z', 'rar'}
+
+        hierarch_types = {'h5', 'nc', 'h4', 'h3', 'h2', 'hdf5', 'hdf4', 'hdf3', 'hdf2'}
+
+        return {"text": text_types, "tabular": tabular_types, "images": image_types,
+                "compressed": compressed_types, "hierarch": hierarch_types}
 
     def gen_families(self, file_ls):
 
@@ -82,7 +86,7 @@ class SimpleExtensionGrouper:
 
             family.add_group(files=[{"path": fdict["id"],
                                      "metadata": fdict,
-                                     "is_gdoc": fdict["is_gdoc"],
+                                     "is_gdoc": fdict["is_gdoc"],  # TODO: generalize away from Google Drive. Local can use this too!
                                      "mimeType": mimeType}],
                              parser=fdict["extractor"])
 
