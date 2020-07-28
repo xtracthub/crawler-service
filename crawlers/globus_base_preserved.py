@@ -40,8 +40,8 @@ overall_logger.addHandler(stream_handler)
 
 seg = simple_ext_grouper.SimpleExtensionGrouper('creds')
 mappings = seg.get_mappings()
-tallies = {"text": 0, "tabular": 0, "images": 0, "compressed": 0, "other": 0, "hierarch": 0}
-size_tallies = {"decompressed": 0, "compressed": 0, "hierarch": 0}
+tallies = {"text": 0, "tabular": 0, "images": 0, "compressed": 0, "other": 0}
+size_tallies = {"decompressed": 0, "compressed": 0}
 
 class GlobusCrawler(Crawler):
 
@@ -50,13 +50,11 @@ class GlobusCrawler(Crawler):
         self.path = path
         self.base_url = base_url  # TODO
         self.eid = eid
-        self.csv_writer = False
         self.group_count = 0
         self.transfer_token = trans_token
         self.auth_token = auth_token
         self.conn = pg_conn()
         self.crawl_id = crawl_id
-        self.grouper = "matio"  # TODO
 
         self.crawl_status = "STARTING"
         self.worker_status_dict = {}
@@ -75,7 +73,6 @@ class GlobusCrawler(Crawler):
         self.commit_threads = 10
         self.success_group_commit_count = 0
         self.commit_completed = False
-        self.line_list = []
 
         self.insert_files_queue = Queue()
 
@@ -119,12 +116,10 @@ class GlobusCrawler(Crawler):
     def enqueue_loop(self, thr_id):
 
         while True:
-            # print("In enqueue loop! ")
             insertables = []
 
             # If empty, then we want to return.
             if self.families_to_enqueue.empty():
-                print("empty!")
                 # If ingest queue empty, we can demote to "idle"
                 if self.crawl_status == "COMMITTING":
                     self.sqs_push_threads[thr_id] = "IDLE"
@@ -141,14 +136,8 @@ class GlobusCrawler(Crawler):
 
             # Remove up to n elements from queue, where n is current_batch.
             current_batch = 1
-            while not self.families_to_enqueue.empty() and current_batch < 2:  #10:  # TODO: back to 10, but with proper cleanup.
-
-                family_to_commit = self.families_to_enqueue.get()
-
-                print(f"Family to commit: {family_to_commit}")
-
-                insertables.append(family_to_commit)
-
+            while not self.families_to_enqueue.empty() and current_batch < 10:
+                insertables.append(self.families_to_enqueue.get())
                 self.active_commits -= 1
                 current_batch += 1
 
@@ -157,7 +146,6 @@ class GlobusCrawler(Crawler):
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
             try:
-                print("Sending!!!")
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
                 logging.debug(f"SQS response: {response}")
@@ -233,13 +221,11 @@ class GlobusCrawler(Crawler):
 
         self.worker_status_dict[worker_id] = "STARTING"
 
-        if self.grouper == "matio":
-            grouper = matio_grouper.MatIOGrouper(logger=file_logger)
-        elif self.grouper == "gdrive":
-            grouper = simple_ext_grouper.SimpleExtensionGrouper(creds=None)
-        else:
-            raise ValueError("TODO: invalid grouper type! Return this to the user!")
+        # TODO: ARG.
+        grouper = matio_grouper.MatIOGrouper(logger=file_logger)
+        #grouper = simple_ext_grouper.SimpleExtensionGrouper(creds=None)
 
+        # exit()
 
         while True:
             t_start = time.time()
@@ -324,9 +310,6 @@ class GlobusCrawler(Crawler):
                     full_path = os.path.join(cur_dir, entry['name'])
                     if entry['type'] == 'file':
 
-                        self.count_files_crawled += 1
-                        self.count_bytes_crawled += entry["size"]
-
                         full_url = f"{self.base_url}{full_path}"
                         print(f"URL: {full_url}")
 
@@ -339,21 +322,18 @@ class GlobusCrawler(Crawler):
 
                         ### TODO: ALL OF THE FOLLOWING SHOULD BE TAKEN OUT ###
                         dec_mapping = None
-                        # print(mappings)
-
+                        print(mappings)
+                        exit()
                         for mapping in mappings:
                             if extension is None:
-                                # print(f"Mapping: {extension}")
+                                print(f"Mapping: {extension}")
                                 dec_mapping = "other"
                                 break
                             extension = extension.lower()
-                            # print(f"Extension: {extension}")
+                            print(f"Extension: {extension}")
 
-                            if extension in mappings[mapping]:
+                            if extension in mapping:
                                 dec_mapping = mapping
-                                # print(f"Mapping: {mapping}")
-                            # else:
-                            #     print(f"Extension {extension} not in {mappings[mapping]}")
 
                         if dec_mapping is None:
                             # print("Mapping: Other")
@@ -362,15 +342,9 @@ class GlobusCrawler(Crawler):
                         tallies[dec_mapping] += 1
                         if dec_mapping == "compressed":
                             size_tallies["compressed"] += entry["size"]
-                            self.line_list.append([full_url, entry["size"], extension, "compressed"])
-
-                        elif dec_mapping == "hierarch":
-                            size_tallies["hierarch"] += entry["size"]
-                            self.line_list.append([full_url, entry["size"], extension, "hierarch"])
                         else:
                             size_tallies["decompressed"] += entry["size"]
 
-                            self.line_list.append([full_url, entry["size"], extension, "decompressed"])
 
 
                     elif entry["type"] == "dir":
@@ -378,15 +352,61 @@ class GlobusCrawler(Crawler):
                     continue
                         ### TODO: ********************************************** ###
 
-                # TODO: Bring back after UMICH
-                families = grouper.group(f_names)
-                if isinstance(families, list):  # TODO: Should come out as family objects.
-                    for family in families:
-                        print(family)
-                        self.count_groups_crawled += len(family['groups'])
 
-                        self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(family)})
-                        self.fam_count += 1
+
+                # TODO: Bring back after UMICH
+
+                #
+                # #  We want to process each potential group of files.
+                # families = grouper.group(f_names)
+                # # families = grouper.gen_families(f_names)  # TODO: need to enable this for globus (not just gdrive/box)
+                #
+                #
+                # # For all families
+                # for family in families:
+                #     tracked_files = set()
+                #     num_file_count = 0
+                #     num_bytes_count = 0
+                #
+                #     groups = family["groups"]
+                #
+                #     fam_file_metadata = {}
+                #
+                #     # print(f"ALL FILE MDATA: {all_file_mdata}")
+                #     for filename in family["files"]:
+                #         # filename = filename.replace("//", "/")
+                #         fam_file_metadata[filename] = all_file_mdata[filename]
+                #
+                #     family["files"] = fam_file_metadata
+                #     family["base_url"] = self.base_url
+                #     # family["family_id"] = family
+                #
+                #     # For all groups in the family
+                #     # print(f"Len files in family: {len(family['files'])}")
+                #     for group in groups:
+                #         self.count_groups_crawled += 1
+                #         parser = group["parser"]
+                #         logging.debug(f"Parser: {parser}")
+                #
+                #         gr_id = group
+                #         file_list = group["files"]
+                #
+                #         # print(f"Len files in group: {len(file_list)}")
+                #
+                #         for f in file_list:
+                #
+                #             if f not in tracked_files:
+                #                 tracked_files.add(f)
+                #                 num_file_count += 1
+                #                 self.count_files_crawled += 1
+                #                 num_bytes_count += all_file_mdata[f]["physical"]["size"]
+                #                 self.count_bytes_crawled += all_file_mdata[f]["physical"]["size"]
+                #
+                #         self.active_commits += 1
+                #         self.group_count += 1
+                #
+                #     self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(family)})
+                #     self.fam_count += 1
 
             except TransferAPIError as e:
                 file_logger.error("Problem directory {}".format(cur_dir))
@@ -440,16 +460,6 @@ class GlobusCrawler(Crawler):
 
         overall_logger.info(f"\n***FINAL groups processed for crawl_id {self.crawl_id}: {self.group_count}***")
         overall_logger.info(f"\n*** CRAWL COMPLETE  (ID: {self.crawl_id})***")
-
-        if self.csv_writer:
-            print("Writing CSV...")
-            import csv
-            with open("UMICH-07-17-2020-CRAWL.csv", 'w') as csv_file:
-                writer = csv.writer(csv_file, delimiter=',')
-                writer.writerow(["full_path", "size_bytes", "extension", "label"])
-                for line in self.line_list:
-                    writer.writerow(line)
-
 
         while True:
             # TODO 2: Should also not check queue but receive status directly from DB thread.

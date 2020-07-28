@@ -12,6 +12,7 @@ from uuid import uuid4
 import threading
 import logging
 import pickle
+import json
 from boxsdk import OAuth2
 import os
 
@@ -41,7 +42,7 @@ def store_tokens(access_token, refresh_token):
     with open(f'{xtract_box_path}refresh_token', 'w') as g:
         g.write(refresh_token)
 
-# TODO: bring back. 
+# TODO: bring back.
 # current_oauth = dict()
 # current_oauth['base'] = OAuth2(
 #         client_id=os.environ["box_client_id"],
@@ -70,6 +71,8 @@ def crawl_repo():
         repo_type = data["repo_type"]
     except pickle.UnpicklingError as e:
         print(f"Tried and failed to unpickle! Caught: {e}")
+        r = json.loads(r)
+
         repo_type = r["repo_type"]
 
     # crawl_id used for tracking crawls, extractions, search index ingestion.
@@ -84,7 +87,7 @@ def crawl_repo():
 
         print(f"Received Transfer Token: {transfer_token}")
 
-        base_url = None
+        base_url = ''
         if 'https_info' in r:
             base_url = r['https_info']['base_url']
 
@@ -103,7 +106,7 @@ def crawl_repo():
         # If using Google Drive, we must receive credentials file containing user's Auth info.
         creds = data["auth_creds"]
         crawler = GoogleDriveCrawler(crawl_id, creds[0])
-        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, None))
+        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, ''))
         crawl_thread.start()
 
     else:
@@ -181,8 +184,14 @@ def get_status():
 
     print(f"Crawl Dict: {crawler_dict}")
     print(f"Crawl ID: {crawl_id}")
+    try:
+        crawler = crawler_dict[crawl_id]
+    except:  # TODO: Clean this up.
+        return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
-    if crawl_id in crawler_dict:
+    if crawl_id in crawler_dict and not isinstance(crawler, GoogleDriveCrawler):
+
+        print("This exists! ")
 
         files_crawled = crawler_dict[crawl_id].count_files_crawled
         bytes_crawled = crawler_dict[crawl_id].count_bytes_crawled
@@ -190,13 +199,20 @@ def get_status():
 
         status_mdata = {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
                 'bytes_crawled': bytes_crawled, 'groups_crawled': groups_crawled}
-    else:
-        files_crawled = 0
-        status_mdata = {}
+        return status_mdata
 
-    crawler = crawler_dict[crawl_id]
+    else:
+        print("WHAT THE HELL?")
+        # files_crawled = 0
+        status_mdata = {}
+        #
+
     if isinstance(crawler, GoogleDriveCrawler):
+
+        print("This is a Google Drive crawler! ")
         status_mdata["repo_type"] = "GDrive"
+
+        files_crawled = crawler.count_files_crawled
 
         type_tally = crawler.crawl_tallies
         num_is_gdoc = crawler.numdocs
@@ -216,6 +232,8 @@ def get_status():
 
     else:
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
+
+
 
 
 @application.route('/fetch_crawl_mdata', methods=["POST"])

@@ -30,7 +30,8 @@ class SimpleExtensionGrouper:
 
     def gen_families(self, file_ls):
 
-        crawl_tallies = {"text": 0, "tabular": 0, "images": 0, "presentation": 0, "other": 0}
+        crawl_tallies = {"text": 0, "tabular": 0, "images": 0, "presentation": 0,
+                         "other": 0, "hierarch": 0, "compressed": 0}
 
         """Given list of metadata dicts, output updated list of extractors
 

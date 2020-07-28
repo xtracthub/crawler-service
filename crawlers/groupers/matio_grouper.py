@@ -147,6 +147,6 @@ class MatIOGrouper:
         self.logger.info(f"Total time to pack groups: {t_group_pack_end - t_graph_start}")
         self.logger.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
-        print(f"Length of families: {len(families)}")
-        print(f"One family: {families[0]}")
+        # print(f"Length of families: {len(families)}")
+        # print(f"One family: {families[0]}")
         return families
