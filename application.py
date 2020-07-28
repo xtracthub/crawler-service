@@ -198,7 +198,7 @@ def get_status():
         groups_crawled = crawler_dict[crawl_id].count_groups_crawled
 
         status_mdata = {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
-                'bytes_crawled': bytes_crawled, 'groups_crawled': groups_crawled}
+                'bytes_crawled': bytes_crawled, 'groups_crawled': groups_crawled, 'crawl_status': crawler.crawl_status}
         return status_mdata
 
     else:
