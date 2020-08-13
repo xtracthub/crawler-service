@@ -124,7 +124,7 @@ class GlobusCrawler(Crawler):
 
             # If empty, then we want to return.
             if self.families_to_enqueue.empty():
-                print("empty!")
+                # print("empty!")
                 # If ingest queue empty, we can demote to "idle"
                 if self.crawl_status == "COMMITTING":
                     self.sqs_push_threads[thr_id] = "IDLE"
@@ -336,41 +336,41 @@ class GlobusCrawler(Crawler):
                         logging.debug(f"Metadata for full path: {entry}")
                         all_file_mdata[full_path] = {"physical": {"size": entry["size"],
                                                                   "extension": extension, "path_type": "globus"}}
-
-                        ### TODO: ALL OF THE FOLLOWING SHOULD BE TAKEN OUT ###
-                        dec_mapping = None
-                        # print(mappings)
-
-                        for mapping in mappings:
-                            if extension is None:
-                                # print(f"Mapping: {extension}")
-                                dec_mapping = "other"
-                                break
-                            extension = extension.lower()
-                            # print(f"Extension: {extension}")
-
-                            if extension in mappings[mapping]:
-                                dec_mapping = mapping
-                                # print(f"Mapping: {mapping}")
-                            # else:
-                            #     print(f"Extension {extension} not in {mappings[mapping]}")
-
-                        if dec_mapping is None:
-                            # print("Mapping: Other")
-                            dec_mapping = "other"
-
-                        tallies[dec_mapping] += 1
-                        if dec_mapping == "compressed":
-                            size_tallies["compressed"] += entry["size"]
-                            self.line_list.append([full_url, entry["size"], extension, "compressed"])
-
-                        elif dec_mapping == "hierarch":
-                            size_tallies["hierarch"] += entry["size"]
-                            self.line_list.append([full_url, entry["size"], extension, "hierarch"])
-                        else:
-                            size_tallies["decompressed"] += entry["size"]
-
-                            self.line_list.append([full_url, entry["size"], extension, "decompressed"])
+                        #
+                        # ### TODO: ALL OF THE FOLLOWING SHOULD BE TAKEN OUT ###
+                        # dec_mapping = None
+                        # # print(mappings)
+                        #
+                        # for mapping in mappings:
+                        #     if extension is None:
+                        #         # print(f"Mapping: {extension}")
+                        #         dec_mapping = "other"
+                        #         break
+                        #     extension = extension.lower()
+                        #     # print(f"Extension: {extension}")
+                        #
+                        #     if extension in mappings[mapping]:
+                        #         dec_mapping = mapping
+                        #         # print(f"Mapping: {mapping}")
+                        #     # else:
+                        #     #     print(f"Extension {extension} not in {mappings[mapping]}")
+                        #
+                        # if dec_mapping is None:
+                        #     # print("Mapping: Other")
+                        #     dec_mapping = "other"
+                        #
+                        # tallies[dec_mapping] += 1
+                        # if dec_mapping == "compressed":
+                        #     size_tallies["compressed"] += entry["size"]
+                        #     self.line_list.append([full_url, entry["size"], extension, "compressed"])
+                        #
+                        # elif dec_mapping == "hierarch":
+                        #     size_tallies["hierarch"] += entry["size"]
+                        #     self.line_list.append([full_url, entry["size"], extension, "hierarch"])
+                        # else:
+                        #     size_tallies["decompressed"] += entry["size"]
+                        #
+                        #     self.line_list.append([full_url, entry["size"], extension, "decompressed"])
 
 
                     elif entry["type"] == "dir":

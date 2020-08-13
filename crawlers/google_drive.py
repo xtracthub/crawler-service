@@ -147,11 +147,22 @@ class GoogleDriveCrawler(Crawler):
         self.crawl_tallies = tallies
         print(f"Tallies: {tallies}")
 
+        # print(item)
+
         file_count = 0
+        will_mdata_ls = []
         # TODO: Might want to put this above so it happens smoothly DURING processing.
         for item in grouped_mdata:
+            print(f"ITEM: {item}")
+
+            will_mdata_ls.append(item['files'][0]['metadata'])
+
             self.families_to_enqueue.put({"Id": str(file_count), "MessageBody": json.dumps(item)})
             file_count += 1
+
+        print("WRITING WILL CRAWL METADATA TO FILE!!!")
+        with open("will_crawl.mdata", "w") as f:
+            f.write(json.dumps(will_mdata_ls))
 
         print("SUCCESSFULLY GROUPED METADATA!")
 

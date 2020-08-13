@@ -13,7 +13,10 @@ import threading
 import logging
 import pickle
 import json
+import time
+import boto3
 from boxsdk import OAuth2
+from queue import Queue
 import os
 
 application = Flask(__name__)
@@ -234,27 +237,92 @@ def get_status():
         return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
 
+ret_vals_dict = {"foobar": Queue()}
+def fetch_crawl_messages(crawl_id):
+
+    print("IN thread! ")
+
+    client = boto3.client('sqs',
+                          aws_access_key_id=os.environ["aws_access"],
+                          aws_secret_access_key=os.environ["aws_secret"], region_name='us-east-1')
+
+    response = client.get_queue_url(
+        QueueName=f'crawl_{crawl_id}',
+        QueueOwnerAWSAccountId='576668000072')  # TODO: env variable
+
+    crawl_queue = response["QueueUrl"]
+
+    empty_count = 0
+
+    while True:
+
+        if empty_count == 10:
+            print("Empty! Returning! ")
+            return   # kill the thread.
+
+        sqs_response = client.receive_message(
+            QueueUrl=crawl_queue,
+            MaxNumberOfMessages=10,  # TODO: Change back to 10.
+            WaitTimeSeconds=1)
+
+        file_list = []
+        del_list = []
+
+        if "Messages" in sqs_response:
+            num_messages = len(sqs_response["Messages"])
+        else:
+            empty_count += 1
+            time.sleep(0.1)
+            continue
+
+        for message in sqs_response["Messages"]:
+            message_body = message["Body"]
+            print(message_body)
+
+            del_list.append({'ReceiptHandle': message["ReceiptHandle"],
+                             'Id': message["MessageId"]})
+
+            mdata = json.loads(message_body)
+
+            files = mdata['files']
+
+            for file_name in files:
+                ret_vals_dict[crawl_id].put(file_name)
+
+            if len(del_list) > 0:
+                response = client.delete_message_batch(
+                    QueueUrl=crawl_queue,
+                    Entries=del_list)
 
 
-@application.route('/fetch_crawl_mdata', methods=["POST"])
+@application.route('/fetch_crawl_mdata', methods=["GET", "POST"])
 def fetch_mdata():
     """ Fetch endpoint -- only for Will & Co's GDrive case to fetch their metadata.
-
     :returns {crawl_id: str, metadata: dict} (dict)"""
 
     r = request.json
     crawl_id = r['crawl_id']
+    n = r['n']
 
-    mdata = None
+    queue_empty = False
 
-    # TODO: Get metadata right here.
+    if crawl_id not in ret_vals_dict:
+        ret_vals_dict[crawl_id] = Queue()
+        thr = threading.Thread(target=fetch_crawl_messages, args=(crawl_id,))
+        thr.start()
 
-    # TODO: Step 1. Save it.
-    # TODO: Step 2. Get it.
-    # TODO: Step 3. Remove it.
+    plucked_files = 0
+    file_list = []
+    while plucked_files < n:
+        if ret_vals_dict[crawl_id].empty():
+            queue_empty = True
+            break
+        file_path = ret_vals_dict[crawl_id].get()
+        print(file_path)
+        plucked_files += 1
+        file_list.append(file_path)
 
-    return {"crawl_id": str(crawl_id), "metadata": mdata}
-
+    return {"crawl_id": str(crawl_id), "num_files": plucked_files, "file_ls": file_list, "queue_empty": queue_empty}
 
 
 if __name__ == '__main__':
