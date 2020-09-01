@@ -103,7 +103,7 @@ class GoogleDriveCrawler(Crawler):
             try:
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
-               # print(f"SQS response: {response}")
+                print(f"SQS response on insert: {response}")
             except Exception as e:  # TODO: too vague
                 print(f"WAS UNABLE TO PROPERLY CONNECT to SQS QUEUE: {e}")
 
