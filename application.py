@@ -205,10 +205,7 @@ def get_status():
         return status_mdata
 
     else:
-        print("WHAT THE HELL?")
-        # files_crawled = 0
         status_mdata = {}
-        #
 
     if isinstance(crawler, GoogleDriveCrawler):
 
@@ -238,6 +235,8 @@ def get_status():
 
 
 ret_vals_dict = {"foobar": Queue()}
+
+
 def fetch_crawl_messages(crawl_id):
 
     print("IN thread! ")

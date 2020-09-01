@@ -153,7 +153,7 @@ class GoogleDriveCrawler(Crawler):
         will_mdata_ls = []
         # TODO: Might want to put this above so it happens smoothly DURING processing.
         for item in grouped_mdata:
-            print(f"ITEM: {item}")
+            # print(f"ITEM: {item}")
 
             will_mdata_ls.append(item['files'][0]['metadata'])
 
