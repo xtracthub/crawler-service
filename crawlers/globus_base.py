@@ -20,6 +20,8 @@ from .groupers import matio_grouper, simple_ext_grouper
 
 from .base import Crawler
 
+from xtract_sdk.packagers import Group, Family
+
 max_crawl_threads = 8
 
 overall_logger = logging.getLogger(__name__)
@@ -42,6 +44,7 @@ seg = simple_ext_grouper.SimpleExtensionGrouper('creds')
 mappings = seg.get_mappings()
 tallies = {"text": 0, "tabular": 0, "images": 0, "compressed": 0, "other": 0, "hierarch": 0}
 size_tallies = {"decompressed": 0, "compressed": 0, "hierarch": 0}
+
 
 class GlobusCrawler(Crawler):
 
@@ -119,12 +122,11 @@ class GlobusCrawler(Crawler):
     def enqueue_loop(self, thr_id):
 
         while True:
-            # print("In enqueue loop! ")
             insertables = []
 
             # If empty, then we want to return.
             if self.families_to_enqueue.empty():
-                # print("empty!")
+
                 # If ingest queue empty, we can demote to "idle"
                 if self.crawl_status == "COMMITTING":
                     self.sqs_push_threads[thr_id] = "IDLE"
@@ -151,8 +153,6 @@ class GlobusCrawler(Crawler):
 
                 self.active_commits -= 1
                 current_batch += 1
-
-            # print(f"Insertables: {insertables}")
 
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
@@ -336,56 +336,33 @@ class GlobusCrawler(Crawler):
                         logging.debug(f"Metadata for full path: {entry}")
                         all_file_mdata[full_path] = {"physical": {"size": entry["size"],
                                                                   "extension": extension, "path_type": "globus"}}
-                        #
-                        # ### TODO: ALL OF THE FOLLOWING SHOULD BE TAKEN OUT ###
-                        # dec_mapping = None
-                        # # print(mappings)
-                        #
-                        # for mapping in mappings:
-                        #     if extension is None:
-                        #         # print(f"Mapping: {extension}")
-                        #         dec_mapping = "other"
-                        #         break
-                        #     extension = extension.lower()
-                        #     # print(f"Extension: {extension}")
-                        #
-                        #     if extension in mappings[mapping]:
-                        #         dec_mapping = mapping
-                        #         # print(f"Mapping: {mapping}")
-                        #     # else:
-                        #     #     print(f"Extension {extension} not in {mappings[mapping]}")
-                        #
-                        # if dec_mapping is None:
-                        #     # print("Mapping: Other")
-                        #     dec_mapping = "other"
-                        #
-                        # tallies[dec_mapping] += 1
-                        # if dec_mapping == "compressed":
-                        #     size_tallies["compressed"] += entry["size"]
-                        #     self.line_list.append([full_url, entry["size"], extension, "compressed"])
-                        #
-                        # elif dec_mapping == "hierarch":
-                        #     size_tallies["hierarch"] += entry["size"]
-                        #     self.line_list.append([full_url, entry["size"], extension, "hierarch"])
-                        # else:
-                        #     size_tallies["decompressed"] += entry["size"]
-                        #
-                        #     self.line_list.append([full_url, entry["size"], extension, "decompressed"])
-
 
                     elif entry["type"] == "dir":
                         self.to_crawl.put(full_path)
                     continue
-                        ### TODO: ********************************************** ###
 
-                # TODO: Bring back after UMICH
                 families = grouper.group(f_names)
-                if isinstance(families, list):  # TODO: Should come out as family objects.
+                print(families)
+
+                # TODO: Should come out as family objects.
+                if isinstance(families, list):
                     for family in families:
-                        print(family)
+                        print(f"Family: {family}")
+                        fam = Family()
                         self.count_groups_crawled += len(family['groups'])
 
-                        self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(family)})
+                        # TODO: Move all of this into matio_grouper.py
+                        for group in family['groups']:
+                            print(f"Group: {group}")
+
+                            file_dict_ls = []
+                            for fname in group['files']:
+                                f_dict = {'path': fname, 'metadata': all_file_mdata[fname]}
+                                file_dict_ls.append(f_dict)
+
+                            fam.add_group(files=file_dict_ls, parser=group["parser"])
+
+                        self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(fam.to_dict())})
                         self.fam_count += 1
 
             except TransferAPIError as e:
@@ -449,7 +426,6 @@ class GlobusCrawler(Crawler):
                 writer.writerow(["full_path", "size_bytes", "extension", "label"])
                 for line in self.line_list:
                     writer.writerow(line)
-
 
         while True:
             # TODO 2: Should also not check queue but receive status directly from DB thread.
