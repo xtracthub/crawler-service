@@ -51,7 +51,7 @@ class GlobusCrawler(Crawler):
     def __init__(self, eid, path, crawl_id, trans_token, auth_token, grouper_name=None, logging_level='debug', base_url=None):
         Crawler.__init__(self)
         self.path = path
-        self.base_url = base_url  # TODO
+        self.base_url = base_url
         self.eid = eid
         self.csv_writer = False
         self.group_count = 0
@@ -357,7 +357,7 @@ class GlobusCrawler(Crawler):
 
                             file_dict_ls = []
                             for fname in group['files']:
-                                f_dict = {'path': fname, 'metadata': all_file_mdata[fname]}
+                                f_dict = {'path': fname, 'metadata': all_file_mdata[fname], 'base_url': self.base_url}
                                 file_dict_ls.append(f_dict)
 
                             fam.add_group(files=file_dict_ls, parser=group["parser"])

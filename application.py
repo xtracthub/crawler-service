@@ -45,7 +45,7 @@ def store_tokens(access_token, refresh_token):
     with open(f'{xtract_box_path}refresh_token', 'w') as g:
         g.write(refresh_token)
 
-# TODO: bring back.
+# TODO: bring back for Box.
 # current_oauth = dict()
 # current_oauth['base'] = OAuth2(
 #         client_id=os.environ["box_client_id"],
@@ -68,7 +68,6 @@ def hello():
 def crawl_repo():
     # r = request.json
     r = request.data
-    # TODO: bring back unpickling for Google.
     try:
         data = pickle.loads(r)
         repo_type = data["repo_type"]
