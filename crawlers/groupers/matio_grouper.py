@@ -147,6 +147,8 @@ class MatIOGrouper:
         families = self.pack_groups(conn_comps, file_groups_map, group_files_map)
         t_group_pack_end = time.time()
 
+        self.total_graphing_time += t_group_pack_end - t_group_pack_start
+
         self.logger.info(f"Total time to pack groups: {t_group_pack_end - t_graph_start}")
         self.logger.debug(f"Generated {len(families)} mutually exclusive families of file-groups... Terminating...")
 
