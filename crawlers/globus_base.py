@@ -147,7 +147,7 @@ class GlobusCrawler(Crawler):
 
                 family_to_commit = self.families_to_enqueue.get()
 
-                print(f"Family to commit: {family_to_commit}")
+                # print(f"Family to commit: {family_to_commit}")
 
                 insertables.append(family_to_commit)
 
@@ -157,7 +157,7 @@ class GlobusCrawler(Crawler):
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
             try:
-                print("Sending!!!")
+                # print("Sending!!!")
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
                 logging.debug(f"SQS response: {response}")
