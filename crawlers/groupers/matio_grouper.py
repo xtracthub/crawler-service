@@ -15,6 +15,7 @@ class MatIOGrouper:
         self.soft_max_files = 50
         self.hard_max_files = 10
         self.logger = logger
+        self.total_graphing_time = 0
 
     def make_file_graph(self, group_dict):
 
@@ -136,6 +137,7 @@ class MatIOGrouper:
         t_graph_start = time.time()
         conn_comps = self.make_file_graph(group_coll)
         t_graph_end = time.time()
+        self.total_graphing_time += t_graph_end - t_graph_start
 
         # self.logger.info(f"Total time to build graph: {t_graph_end - t_graph_start}")
         print(f"Total time to build graph: {t_graph_end - t_graph_start}")

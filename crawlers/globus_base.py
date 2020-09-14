@@ -80,6 +80,11 @@ class GlobusCrawler(Crawler):
         self.commit_completed = False
         self.line_list = []
 
+        self.total_grouping_time = 0
+        self.total_graphing_time = 0
+        self.globus_network_time = 0
+        self.total_auth_time = 0
+
         self.insert_files_queue = Queue()
 
         self.commit_queue_empty = True  # TODO: switch back to false when committing turned back on.
@@ -233,6 +238,7 @@ class GlobusCrawler(Crawler):
 
         self.worker_status_dict[worker_id] = "STARTING"
 
+        # TODO: add 'by directory' here.
         if self.grouper == "matio":
             grouper = matio_grouper.MatIOGrouper(logger=file_logger)
         elif self.grouper == "gdrive":
@@ -291,6 +297,7 @@ class GlobusCrawler(Crawler):
                         t_gl_ls_end = time.time()
 
                         file_logger.info(f"Total time to do globus_ls: {t_gl_ls_end - t_gl_ls_start}")
+                        self.globus_network_time += t_gl_ls_end - t_gl_ls_start
                         break
 
                     except GlobusTimeoutError as e:
@@ -340,12 +347,12 @@ class GlobusCrawler(Crawler):
                         self.to_crawl.put(full_path)
                     continue
 
-
                 tm = time.time()
                 families = grouper.group(f_names)
                 tn = time.time()
 
-                print(f"Total Grouping time: {tn-tm}" )
+                self.total_grouping_time += tn-tm
+                self.total_graphing_time = grouper.total_graphing_time
 
                 # TODO: Should come out as family objects.
                 if isinstance(families, list):
@@ -419,6 +426,9 @@ class GlobusCrawler(Crawler):
         t_end = time.time()
 
         print(f"TOTAL TIME: {t_end-t_start}")
+        print(f"Total Auth time: {self.total_auth_time}")
+        print(f"Total Grouping time: {self.total_auth_time}")
+        print(f"Total Graphing time: {self.total_graphing_time}")
         print(tallies)
         print(size_tallies)
 
