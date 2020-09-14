@@ -137,7 +137,8 @@ class MatIOGrouper:
         conn_comps = self.make_file_graph(group_coll)
         t_graph_end = time.time()
 
-        self.logger.info(f"Total time to build graph: {t_graph_end - t_graph_start}")
+        # self.logger.info(f"Total time to build graph: {t_graph_end - t_graph_start}")
+        print(f"Total time to build graph: {t_graph_end - t_graph_start}")
 
         # Use the connected components to generate a family for each connected component.
         t_group_pack_start = time.time()

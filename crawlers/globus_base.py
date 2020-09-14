@@ -20,7 +20,7 @@ from .groupers import matio_grouper, simple_ext_grouper
 
 from .base import Crawler
 
-from xtract_sdk.packagers import Group, Family
+from xtract_sdk.packagers import Family
 
 max_crawl_threads = 8
 
@@ -240,7 +240,6 @@ class GlobusCrawler(Crawler):
         else:
             raise ValueError("TODO: invalid grouper type! Return this to the user!")
 
-
         while True:
             t_start = time.time()
             all_file_mdata = {}  # Holds all metadata for a given Globus directory.
@@ -341,8 +340,12 @@ class GlobusCrawler(Crawler):
                         self.to_crawl.put(full_path)
                     continue
 
+
+                tm = time.time()
                 families = grouper.group(f_names)
-                print(families)
+                tn = time.time()
+
+                print(f"Total Grouping time: {tn-tm}" )
 
                 # TODO: Should come out as family objects.
                 if isinstance(families, list):
@@ -400,12 +403,16 @@ class GlobusCrawler(Crawler):
         for t in list_threads:
             t.join()
 
+        tx = time.time()
         self.crawl_status = "COMMITTING"
 
         print("Waiting for commit to end...")
         for t in self.thr_ls:
             t.join()
         print("COMMIT SUCCESSFULLY ENDED!")
+        ty = time.time()
+
+        print(f"Hanging commit time: {ty-tx}")
 
         self.crawl_status = "SUCCEEDED"
 
