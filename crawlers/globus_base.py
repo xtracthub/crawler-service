@@ -191,13 +191,15 @@ class GlobusCrawler(Crawler):
         secret = os.getenv("GLOBUS_FUNCX_SECRET")
 
         # Step 2: Transform token and introspect it.
+        time0 = time.time()
+
         conf_app_client = ConfidentialAppAuthClient(client_id, secret)
         token = str.replace(str(self.auth_token), 'Bearer ', '')
 
-        time0 = time.time()
         auth_detail = conf_app_client.oauth2_token_introspect(token)
         time1 = time.time()
         overall_logger.info(f"INTROSPECT TIME: {time1-time0}")
+        self.total_auth_time += time1-time0
 
         uid = auth_detail['username']
 
@@ -427,8 +429,9 @@ class GlobusCrawler(Crawler):
 
         print(f"TOTAL TIME: {t_end-t_start}")
         print(f"Total Auth time: {self.total_auth_time}")
-        print(f"Total Grouping time: {self.total_auth_time}")
+        print(f"Total Grouping time: {self.total_grouping_time}")
         print(f"Total Graphing time: {self.total_graphing_time}")
+        print(f"Total Globus time: {self.globus_network_time}")
         print(tallies)
         print(size_tallies)
 
