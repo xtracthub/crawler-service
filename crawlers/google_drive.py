@@ -43,6 +43,13 @@ class GoogleDriveCrawler(Crawler):
 
         self.crawl_status = "STARTING"
 
+        self.total_grouping_time = 0
+        self.total_graphing_time = 0
+        self.globus_network_time = 0
+        self.total_auth_time = 0
+
+        self.pre_commit_time = 0
+
         # TODO: this really needs to be part of its own data class bc copied and pasted from globus_base
         self.client = boto3.client('sqs',
                                    aws_access_key_id=os.environ["aws_access"],
@@ -83,7 +90,12 @@ class GoogleDriveCrawler(Crawler):
                         self.commit_completed = True
                         self.crawl_status = "COMPLETED"
                         self.crawl_end = time.time()
+                        self.commit_time = self.crawl_end - self.pre_commit_time
                         print(f"Thread {thr_id} is terminating!")
+                        print(f"Grouping time: {self.total_grouping_time}")
+                        print(f"Google Req time: {self.globus_network_time}")
+                        print(f"Total commit time: {self.commit_time}")
+                        print(f"Total time: {self.crawl_start - self.crawl_end}")
                         return 0
                 time.sleep(1)
                 continue
@@ -120,12 +132,18 @@ class GoogleDriveCrawler(Crawler):
 
             if not next_page_token and starting:
                 # Call the Drive v3 API
+                tc = time.time()
                 results = get_next_page(self.drive_conn, None)
                 starting = False
+                td = time.time()
+
+                self.globus_network_time += td-tc
 
             else:
+                te = time.time()
                 results = get_next_page(self.drive_conn, next_page_token)
-
+                tf = time.time()
+                self.globus_network_time += tf - te
             items = results.get('files', [])
             next_page_token = results.get("nextPageToken", [])
 
@@ -139,15 +157,18 @@ class GoogleDriveCrawler(Crawler):
                 print(f"Total files processed: {len(all_files)}")
                 # TODO: this should return, but should probably enqueue (same as Globus HTTPS crawler)
                 # return {"file_mdata": all_files, "crawl_id": self.crawl_id}
+                self.pre_commit_time = time.time()
                 self.crawl_status = "COMMITTING"
                 break
 
+        ta = time.time()
         print("Running grouper...")
         grouped_mdata, tallies = grouper.gen_families(all_files)
         self.crawl_tallies = tallies
+        tb = time.time()
         print(f"Tallies: {tallies}")
 
-        # print(item)
+        self.total_grouping_time += tb - ta
 
         file_count = 0
         will_mdata_ls = []
@@ -155,14 +176,14 @@ class GoogleDriveCrawler(Crawler):
         for item in grouped_mdata:
             # print(f"ITEM: {item}")
 
-            will_mdata_ls.append(item['files'][0]['metadata'])
+            # will_mdata_ls.append(item['files'][0]['metadata'])
 
             self.families_to_enqueue.put({"Id": str(file_count), "MessageBody": json.dumps(item)})
             file_count += 1
 
-        print("WRITING WILL CRAWL METADATA TO FILE!!!")
-        with open("will_crawl.mdata", "w") as f:
-            f.write(json.dumps(will_mdata_ls))
+        # print("WRITING WILL CRAWL METADATA TO FILE!!!")
+        # with open("will_crawl.mdata", "w") as f:
+        #     f.write(json.dumps(will_mdata_ls))
 
         print("SUCCESSFULLY GROUPED METADATA!")
 
