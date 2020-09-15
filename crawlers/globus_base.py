@@ -72,7 +72,6 @@ class GlobusCrawler(Crawler):
         self.count_groups_crawled = 0
         self.count_files_crawled = 0
         self.count_bytes_crawled = 0
-        self.commit_gap = 0.1
 
         self.active_commits = 0
         self.commit_threads = 10
