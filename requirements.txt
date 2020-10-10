@@ -4,9 +4,9 @@ globus_sdk
 psycopg2-binary
 dfttopif
 Pillow
-# numpy
-# pymatgen
-# git+https://github.com/materials-data-facility/MaterialsIO.git
+numpy
+pymatgen
+git+https://github.com/materials-data-facility/MaterialsIO.git
 # hyperspy
 tableschema
 flask
