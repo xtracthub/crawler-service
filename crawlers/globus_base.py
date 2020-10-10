@@ -168,7 +168,6 @@ class GlobusCrawler(Crawler):
             logging.debug("[COMMIT] Preparing batch commit -- executing!")
 
             try:
-                # print("Sending!!!")
                 response = self.client.send_message_batch(QueueUrl=self.queue_url,
                                                           Entries=insertables)
                 logging.debug(f"SQS response: {response}")
