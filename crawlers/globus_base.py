@@ -100,6 +100,13 @@ class GlobusCrawler(Crawler):
             raise ConnectionError("Received non-200 status from SQS!")
         print(queue)
 
+        queue_2 = self.client.create_queue(QueueName=f"transfer_{str(self.crawl_id)}")
+
+        if queue_2["ResponseMetadata"]["HTTPStatusCode"] == 200:
+            self.crawl_queue_url = queue_2["QueueUrl"]
+        else:
+            raise ConnectionError("Received non-200 status from SQS!")
+
         try:
             self.token_owner = self.get_uid_from_token()
         except:  # TODO: Real auth that's not just printing.
