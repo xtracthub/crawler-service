@@ -27,10 +27,11 @@ max_crawl_threads = 8
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
 
-fh = logging.FileHandler(f"crawl_main.log")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-overall_logger.addHandler(fh)
+# TODO: bring this back if there's no problem
+# fh = logging.FileHandler(f"crawl_main.log")
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# fh.setFormatter(formatter)
+# overall_logger.addHandler(fh)
 
 # Discovery -- we don't want to send it to the parent that's writing to console.
 #  See hierarchy (and one-line solution) here: https://opensource.com/article/17/9/python-logging
