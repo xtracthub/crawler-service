@@ -236,13 +236,13 @@ class GlobusCrawler(Crawler):
         # Borrowed from here:
         # https://stackoverflow.com/questions/6386698/how-to-write-to-a-file-using-the-logging-python-module
         file_logger = logging.getLogger(str(worker_id))  # TODO: __name__?
-        file_logger.setLevel(logging.DEBUG)
+        # file_logger.setLevel(logging.DEBUG)
 
-        fh = logging.FileHandler(f"cr_worker_{worker_id}-{max_crawl_threads - 1}.log")
+        # fh = logging.FileHandler(f"cr_worker_{worker_id}-{max_crawl_threads - 1}.log")
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        file_logger.addHandler(fh)
-        file_logger.propagate = False
+        # fh.setFormatter(formatter)
+        # file_logger.addHandler(fh)
+        # file_logger.propagate = False
 
         self.worker_status_dict[worker_id] = "STARTING"
 
