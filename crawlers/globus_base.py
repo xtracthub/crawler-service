@@ -158,7 +158,11 @@ class GlobusCrawler(Crawler):
             while not self.families_to_enqueue.empty() and current_batch < 2:  #10:  # TODO: back to 10, but with proper cleanup.
 
                 family_to_commit = self.families_to_enqueue.get()
-                family_to_commit['metadata']['crawl_timestamp'] = time.time()
+
+                # print("FROOOOO")
+                # print(family_to_commit)
+                # exit()
+                # family_to_commit['metadata']['crawl_timestamp'] = time.time()
 
                 # print(f"Family to commit: {family_to_commit}")
 
@@ -381,7 +385,10 @@ class GlobusCrawler(Crawler):
 
                             fam.add_group(files=file_dict_ls, parser=group["parser"])
 
-                        self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(fam.to_dict())})
+                        dict_fam = fam.to_dict()
+                        dict_fam['metadata']['crawl_timestamp'] = time.time()
+
+                        self.families_to_enqueue.put({"Id": str(self.fam_count), "MessageBody": json.dumps(dict_fam)})
                         self.fam_count += 1
 
             except TransferAPIError as e:
