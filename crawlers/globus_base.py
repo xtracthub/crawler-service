@@ -158,6 +158,7 @@ class GlobusCrawler(Crawler):
             while not self.families_to_enqueue.empty() and current_batch < 2:  #10:  # TODO: back to 10, but with proper cleanup.
 
                 family_to_commit = self.families_to_enqueue.get()
+                family_to_commit['metadata']['crawl_timestamp'] = time.time()
 
                 # print(f"Family to commit: {family_to_commit}")
 
