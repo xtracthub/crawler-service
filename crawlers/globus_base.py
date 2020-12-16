@@ -22,7 +22,7 @@ from .base import Crawler
 
 from xtract_sdk.packagers import Family
 
-max_crawl_threads = 16
+max_crawl_threads = 8
 
 overall_logger = logging.getLogger(__name__)
 overall_logger.setLevel(logging.DEBUG)
