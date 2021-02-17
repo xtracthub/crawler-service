@@ -4,8 +4,10 @@ from flask_api import status
 # from boxsdk import Client
 
 # Import each of our crawlers.
-from crawlers.globus_base import GlobusCrawler
-from crawlers.google_drive import GoogleDriveCrawler
+# from crawlers.globus_base import GlobusCrawler
+# from crawlers.google_drive import GoogleDriveCrawler
+from crawlers.utils.crawler_utils import push_to_pg  # TODO: fix this path.
+from utils.sqs_utils import push_crawl_task
 
 from uuid import uuid4
 
@@ -70,52 +72,68 @@ def crawl_repo():
     r = request.data
     try:
         data = pickle.loads(r)
-        repo_type = data["repo_type"]
+        # repo_type = data["repo_type"]
     except pickle.UnpicklingError as e:
         print(f"Tried and failed to unpickle! Caught: {e}")
         r = json.loads(r)
 
-        repo_type = r["repo_type"]
+        # repo_type = r["repo_type"]
 
     # crawl_id used for tracking crawls, extractions, search index ingestion.
     crawl_id = uuid4()
 
-    if repo_type == "GLOBUS":
-        endpoint_id = r['eid']
-        starting_dir = r['dir_path']
-        grouper = r['grouper']
-        transfer_token = r['Transfer']
-        auth_token = r['Authorization']
+    endpoints = r['endpoints']
+    tokens = r['tokens'][0]  # TODO: no idea why this is arriving as a list.
 
-        print(f"Received Transfer Token: {transfer_token}")
+    print(tokens)
 
-        base_url = ''
-        if 'https_info' in r:
-            base_url = r['https_info']['base_url']
+    # if repo_type == "GLOBUS":
+    # endpoint_id = r['eid']
+    # starting_dir = r['dir_path']
+    # grouper = r['grouper']
+    # transfer_token = r['Transfer']
+    # auth_token = r['Authorization']
 
-        crawler = GlobusCrawler(endpoint_id,
-                                starting_dir,
-                                crawl_id,
-                                transfer_token,
-                                auth_token,
-                                grouper,
-                                base_url=base_url)
-        tc = crawler.get_transfer()
-        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
-        crawl_thread.start()
+    # print(f"Received Transfer Token: {transfer_token}")
 
-    elif repo_type == "GDRIVE":
-        # If using Google Drive, we must receive credentials file containing user's Auth info.
-        creds = data["auth_creds"]
-        crawler = GoogleDriveCrawler(crawl_id, creds[0])
-        crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, ''))
-        crawl_thread.start()
+    # base_url = ''
+    # if 'https_info' in r:
+    #     base_url = r['https_info']['base_url']
 
-    else:
-        return {"crawl_id": str(crawl_id),
-                "message": "Error: Repo must be of type 'GLOBUS' or 'GDRIVE'. "}, status.HTTP_400_BAD_REQUEST
+    print("We have reached this point! ")
 
-    crawler_dict[str(crawl_id)] = crawler
+        # crawler = GlobusCrawler(endpoint_id,
+        #                         starting_dir,
+        #                         crawl_id,
+        #                         transfer_token,
+        #                         auth_token,
+        #                         grouper,
+        #                         base_url=base_url)
+        # tc = crawler.get_transfer()
+        # crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
+        # crawl_thread.start()
+
+    # elif repo_type == "GDRIVE":
+    #     # If using Google Drive, we must receive credentials file containing user's Auth info.
+    #     creds = data["auth_creds"]
+    #     crawler = GoogleDriveCrawler(crawl_id, creds[0])
+    #     crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, ''))
+    #     crawl_thread.start()
+
+    # for ep in endpoints:
+    # print(endpoints)
+    push_to_pg(str(crawl_id), endpoints)
+
+    push_crawl_task(json.dumps({'crawl_id': str(crawl_id),
+                                'transfer_token': tokens['Transfer'],
+                                'auth_token': tokens['Authorization']}), str(270))
+
+
+    # else:
+    #     return {"crawl_id": str(crawl_id),
+    #             "message": "Error: Repo must be of type 'GLOBUS' or 'GDRIVE'. "}, status.HTTP_400_BAD_REQUEST
+
+    # crawler_dict[str(crawl_id)] = crawler
 
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
