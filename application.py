@@ -85,7 +85,7 @@ def crawl_repo():
     crawl_id = uuid4()
 
     endpoints = r['endpoints']
-    tokens = r['tokens'][0]  # TODO: no idea why this is arriving as a list.
+    tokens = r['tokens'] # TODO: no idea why this is arriving as a list.
 
     print(tokens)
 
@@ -314,7 +314,7 @@ def fetch_mdata():
 
     r = request.json
     crawl_id = r['crawl_id']
-    n = r['n']
+    n = r['n']  # TODO: We need to internall set a maximum 'n' value. Probably 100 or 1000.
 
     queue_empty = False
 
