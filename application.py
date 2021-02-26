@@ -137,6 +137,7 @@ def crawl_repo():
 
     # crawler_dict[str(crawl_id)] = crawler
 
+    init_crawl.append(str(crawl_id))
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
 
 
@@ -208,6 +209,7 @@ def get_status():
     print(f"Crawl ID: {crawl_id}")
 
     status_mdata = get_crawl_status(crawl_id)
+    print(f"Status mdata: {status_mdata}")
 
     if 'error' in status_mdata and crawl_id in init_crawl:
         status_mdata = {'crawl_id': crawl_id, 'crawl_status': 'initializing'}

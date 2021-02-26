@@ -72,5 +72,5 @@ def get_crawl_status(crawl_id):
 
     return crawl_stats
 
-x = get_crawl_status('74a58778-4b92-4637-93d4-d006685ed549')
-print(x)
+# x = get_crawl_status('74a58778-4b92-4637-93d4-d006685ed549')
+# print(x)
