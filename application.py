@@ -85,7 +85,7 @@ def crawl_repo():
     crawl_id = uuid4()
 
     endpoints = r['endpoints']
-    tokens = r['tokens'] # TODO: no idea why this is arriving as a list.
+    tokens = r['tokens']  # TODO: no idea why this is arriving as a list.
 
     print(tokens)
 

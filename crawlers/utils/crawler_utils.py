@@ -19,8 +19,11 @@ def push_to_pg(crawl_id, endpoints):
     # TODO: we should have two tables here.
     # init_query = "INSERT INTO crawls (crawl_id, owner)"
 
+    print(f"Passed in {len(endpoints)} endpoints!")
+
     # TODO: update to one batch insert
     for endpoint in endpoints:
+        print(f"Endpoint: {endpoint}")
 
         dir_paths = endpoint['dir_paths']
         # cursor.execute_query
@@ -31,6 +34,7 @@ def push_to_pg(crawl_id, endpoints):
                 f"'{dir}', " \
                 f"'{endpoint['repo_type']}', " \
                 f"'{endpoint['eid']}')"
+
 
             cursor.execute(query)
 
