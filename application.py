@@ -21,6 +21,8 @@ from boxsdk import OAuth2
 from queue import Queue
 import os
 
+init_crawl = []
+
 application = Flask(__name__)
 
 # TODO: remove all calls to the database from this application.
@@ -206,6 +208,10 @@ def get_status():
     print(f"Crawl ID: {crawl_id}")
 
     status_mdata = get_crawl_status(crawl_id)
+
+    if 'error' in status_mdata and crawl_id in init_crawl:
+        status_mdata = {'crawl_id': crawl_id, 'crawl_status': 'initializing'}
+
     return status_mdata
 
     # TODO: Do something with all this gdrive weirdness (maybe add more metadata to the regular status object?)
