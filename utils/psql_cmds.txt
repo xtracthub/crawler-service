@@ -72,3 +72,10 @@ ALTER TABLE group_metadata_2
 ALTER TABLE group_metadata_2
    ADD COLUMN group_start,
    ADD COLUMN group_end;
+
+CREATE TABLE crawl_stats(
+    crawl_id VARCHAR(50) PRIMARY KEY,
+    files_crawled BIGINT NOT NULL DEFAULT 0,
+    bytes_crawled BIGINT NOT NULL DEFAULT 0,
+    groups_crawled BIGINT NOT NULL DEFAULT 0
+);

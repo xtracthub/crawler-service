@@ -6,7 +6,7 @@ from flask_api import status
 # Import each of our crawlers.
 # from crawlers.globus_base import GlobusCrawler
 # from crawlers.google_drive import GoogleDriveCrawler
-from crawlers.utils.crawler_utils import push_to_pg  # TODO: fix this path.
+from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status
 from utils.sqs_utils import push_crawl_task
 
 from uuid import uuid4
@@ -204,51 +204,39 @@ def get_status():
 
     print(f"Crawl Dict: {crawler_dict}")
     print(f"Crawl ID: {crawl_id}")
-    try:
-        crawler = crawler_dict[crawl_id]
-    except:  # TODO: Clean this up.
-        return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
-    if crawl_id in crawler_dict and not isinstance(crawler, GoogleDriveCrawler):
+    status_mdata = get_crawl_status(crawl_id)
+    return status_mdata
 
-        print("This exists! ")
-
-        files_crawled = crawler_dict[crawl_id].count_files_crawled
-        bytes_crawled = crawler_dict[crawl_id].count_bytes_crawled
-        groups_crawled = crawler_dict[crawl_id].count_groups_crawled
-
-        status_mdata = {'crawl_id': str(crawl_id), 'files_crawled': files_crawled,
-                'bytes_crawled': bytes_crawled, 'groups_crawled': groups_crawled, 'crawl_status': crawler.crawl_status}
-        return status_mdata
-
-    else:
-        status_mdata = {}
-
-    if isinstance(crawler, GoogleDriveCrawler):
-
-        print("This is a Google Drive crawler! ")
-        status_mdata["repo_type"] = "GDrive"
-
-        files_crawled = crawler.count_files_crawled
-
-        type_tally = crawler.crawl_tallies
-        num_is_gdoc = crawler.numdocs
-        num_is_user_upload = files_crawled - num_is_gdoc
-        status_mdata["gdrive_mdata"] = {'first_ext_tallies': type_tally, 'doc_types': {"is_gdoc": num_is_gdoc,
-                                                                                       "is_user_upload": num_is_user_upload}}
-        status_mdata["crawl_start_t"] = crawler.crawl_start
-        status_mdata["crawl_status"] = crawler.crawl_status
-        status_mdata["n_commit_threads"] = crawler.commit_threads
-        status_mdata["groups_crawled"] = files_crawled
-
-        if crawler.crawl_status == "COMPLETED":
-            status_mdata["crawl_end_t"] = crawler.crawl_end
-            status_mdata["total_crawl_time"] = crawler.crawl_end - crawler.crawl_start
-
-        return status_mdata
-
-    else:
-        return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
+    # TODO: Do something with all this gdrive weirdness (maybe add more metadata to the regular status object?)
+    # else:
+    #     status_mdata = {}
+    #
+    # if isinstance(crawler, GoogleDriveCrawler):
+    #
+    #     print("This is a Google Drive crawler! ")
+    #     status_mdata["repo_type"] = "GDrive"
+    #
+    #     files_crawled = crawler.count_files_crawled
+    #
+    #     type_tally = crawler.crawl_tallies
+    #     num_is_gdoc = crawler.numdocs
+    #     num_is_user_upload = files_crawled - num_is_gdoc
+    #     status_mdata["gdrive_mdata"] = {'first_ext_tallies': type_tally, 'doc_types': {"is_gdoc": num_is_gdoc,
+    #                                                                                    "is_user_upload": num_is_user_upload}}
+    #     status_mdata["crawl_start_t"] = crawler.crawl_start
+    #     status_mdata["crawl_status"] = crawler.crawl_status
+    #     status_mdata["n_commit_threads"] = crawler.commit_threads
+    #     status_mdata["groups_crawled"] = files_crawled
+    #
+    #     if crawler.crawl_status == "COMPLETED":
+    #         status_mdata["crawl_end_t"] = crawler.crawl_end
+    #         status_mdata["total_crawl_time"] = crawler.crawl_end - crawler.crawl_start
+    #
+    #     return status_mdata
+    #
+    # else:
+    #     return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
 
 ret_vals_dict = {"foobar": Queue()}
