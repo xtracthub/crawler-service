@@ -16,7 +16,7 @@ def get_sqs_conn():
 
 def get_crawl_work_queue(client):
     response = client.get_queue_url(
-        QueueName='crawl_work_queue_2',
+        QueueName='crawl_work_queue',
         QueueOwnerAWSAccountId=os.environ["aws_account"]
     )
 
