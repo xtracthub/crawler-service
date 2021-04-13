@@ -117,6 +117,7 @@ def crawl_repo():
 
     endpoints = r['endpoints']
     tokens = r['tokens']  # TODO: no idea why this is arriving as a list.
+    max_crawl_threads = r["max_crawl_threads"]
 
     print(tokens)
 
@@ -162,7 +163,8 @@ def crawl_repo():
 
     push_crawl_task(json.dumps({'crawl_id': str(crawl_id),
                                 'transfer_token': tokens['Transfer'],
-                                'auth_token': tokens['Authorization']}), str(270))
+                                'auth_token': tokens['Authorization'],
+                                "max_crawl_threads": max_crawl_threads}), str(270))
 
 
     # else:

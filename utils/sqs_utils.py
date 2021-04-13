@@ -16,7 +16,7 @@ def get_sqs_conn():
 
 def get_crawl_work_queue(client):
     response = client.get_queue_url(
-        QueueName='crawl_work_queue',
+        QueueName='ryan_crawl_work_queue',
         QueueOwnerAWSAccountId=os.environ["aws_account"]
     )
 
@@ -51,6 +51,7 @@ def push_crawl_task(task, unique_id):
         'MessageBody': task,
 
     }
+    print(entry)
 
     client = get_sqs_conn()
     client.send_message_batch(QueueUrl=get_crawl_work_queue(client),
