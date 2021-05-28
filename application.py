@@ -1,7 +1,6 @@
 
-from flask import Flask, request, redirect
+from flask import Flask, request
 from flask_api import status
-# from boxsdk import Client
 
 # Import each of our crawlers.
 # from crawlers.globus_base import GlobusCrawler
@@ -15,11 +14,8 @@ import threading
 import logging
 import pickle
 import json
-import time
 import boto3
-from boxsdk import OAuth2
 from queue import Queue
-import os
 
 init_crawl = []
 
@@ -123,114 +119,14 @@ def crawl_repo():
     # TODO: SOMETHING HERE.
     print(get_uid_from_token(tokens['Authorization']))
 
-    # if repo_type == "GLOBUS":
-    # endpoint_id = r['eid']
-    # starting_dir = r['dir_path']
-    # grouper = r['grouper']
-    # transfer_token = r['Transfer']
-    # auth_token = r['Authorization']
-
-    # print(f"Received Transfer Token: {transfer_token}")
-
-    # base_url = ''
-    # if 'https_info' in r:
-    #     base_url = r['https_info']['base_url']
-
-    print("We have reached this point! ")
-
-        # crawler = GlobusCrawler(endpoint_id,
-        #                         starting_dir,
-        #                         crawl_id,
-        #                         transfer_token,
-        #                         auth_token,
-        #                         grouper,
-        #                         base_url=base_url)
-        # tc = crawler.get_transfer()
-        # crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, tc))
-        # crawl_thread.start()
-
-    # elif repo_type == "GDRIVE":
-    #     # If using Google Drive, we must receive credentials file containing user's Auth info.
-    #     creds = data["auth_creds"]
-    #     crawler = GoogleDriveCrawler(crawl_id, creds[0])
-    #     crawl_thread = threading.Thread(target=crawl_launch, args=(crawler, ''))
-    #     crawl_thread.start()
-
-    # for ep in endpoints:
-    # print(endpoints)
     push_to_pg(str(crawl_id), endpoints)
 
     push_crawl_task(json.dumps({'crawl_id': str(crawl_id),
                                 'transfer_token': tokens['Transfer'],
                                 'auth_token': tokens['Authorization']}), str(270))
 
-
-    # else:
-    #     return {"crawl_id": str(crawl_id),
-    #             "message": "Error: Repo must be of type 'GLOBUS' or 'GDRIVE'. "}, status.HTTP_400_BAD_REQUEST
-
-    # crawler_dict[str(crawl_id)] = crawler
-
     init_crawl.append(str(crawl_id))
     return {"crawl_id": str(crawl_id)}, status.HTTP_200_OK
-
-
-@application.route('/auth_box', methods=['GET', 'POST'])
-def auth_box():
-
-    auth_url, csrf_token = current_oauth['base'].get_authorization_url('http://127.0.0.1:5000/get_token')
-
-    # with open()
-
-    # First we check to see if access and refresh tokens
-    # TODO: enable auth from refresh token.
-    # oauth = OAuth2(
-    #     client_id=os.environ["box_client_access"],
-    #     client_secret=os.environ["box_client_secret"],
-    #     access_token='ACCESS_TOKEN',
-    #     refresh_token='REFRESH_TOKEN',
-    # )
-
-    return redirect(auth_url, code=302)
-
-
-@application.route('/get_token', methods=['GET', 'POST'])
-def get_token():
-    auth_code = request.args.get('code')
-    oauth.authenticate(auth_code)
-
-    client = Client(oauth)
-
-    user = client.user().get()
-
-    box_creds[user.id] = client
-
-    print(f"Box creds: {box_creds}")
-
-    print("The current user is {0}".format(user.id))
-
-    return "The current user is {0}. You may shut this page! ".format(user.id)
-
-
-@application.route('/crawl_box', methods=['POST', 'GET'])
-def crawl_box():
-    #r = request.json
-    #user_id = int(r["user_id"])
-
-    user_id = '1425958733'
-
-    print(f"Box Creds 2: {box_creds}")
-
-    if user_id in box_creds:  # TODO: how do we know if auth is stale?
-        client = box_creds[user_id]
-
-    else:
-        return {"error": "Error fetching saved auth token. Please Auth again"}
-
-    root_folder = client.folder(folder_id='112657269903').get()
-
-    print(root_folder)
-    return root_folder.id
 
 
 @application.route('/get_crawl_status', methods=['GET'])
@@ -265,7 +161,8 @@ def get_status():
     #     num_is_gdoc = crawler.numdocs
     #     num_is_user_upload = files_crawled - num_is_gdoc
     #     status_mdata["gdrive_mdata"] = {'first_ext_tallies': type_tally, 'doc_types': {"is_gdoc": num_is_gdoc,
-    #                                                                                    "is_user_upload": num_is_user_upload}}
+    #                                                                                    "is_user_upload":
+    #                                                                                    num_is_user_upload}}
     #     status_mdata["crawl_start_t"] = crawler.crawl_start
     #     status_mdata["crawl_status"] = crawler.crawl_status
     #     status_mdata["n_commit_threads"] = crawler.commit_threads
