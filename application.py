@@ -1,18 +1,15 @@
 
 from flask import Flask, request
-# from flask_api import status
+from flask_api import status
 
-# Import each of our crawlers.
-# from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status
-# from utils.sqs_utils import push_crawl_task
 
-# from uuid import uuid4
-# #
-# import threading
-# import pickle
-# import json
-# import boto3
-# from queue import Queue
+from uuid import uuid4
+#
+import threading
+import pickle
+import json
+import boto3
+from queue import Queue
 
 init_crawl = []
 
