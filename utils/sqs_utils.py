@@ -14,11 +14,18 @@ def get_sqs_conn():
     return client
 
 
-def get_crawl_work_queue(client):
-    response = client.get_queue_url(
-        QueueName='crawl_work_queue',
-        QueueOwnerAWSAccountId=os.environ["aws_account"]
-    )
+def get_crawl_work_queue(client, is_dev=False):
+
+    if not is_dev:
+        response = client.get_queue_url(
+            QueueName='crawl_work_queue',
+            QueueOwnerAWSAccountId=os.environ["aws_account"]
+        )
+    else:
+        response = client.get_queue_url(
+            QueueName='crawl_work_queue_DEBUG',
+            QueueOwnerAWSAccountId=os.environ["aws_account"]
+        )
 
     crawl_work_queue = response["QueueUrl"]
 
@@ -42,7 +49,7 @@ def get_next_task(max_timeout=120):
     return json.loads(message)
 
 
-def push_crawl_task(task, unique_id):
+def push_crawl_task(task, unique_id, is_dev=False):
 
     # TODO: when we turn this into a class 'id' should just be a 'count up' variable
 
@@ -53,7 +60,7 @@ def push_crawl_task(task, unique_id):
     }
 
     client = get_sqs_conn()
-    client.send_message_batch(QueueUrl=get_crawl_work_queue(client),
+    client.send_message_batch(QueueUrl=get_crawl_work_queue(client, is_dev=is_dev),
                               Entries=[entry])
 
     print("Successfully sent task to SQS!")

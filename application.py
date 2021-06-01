@@ -21,6 +21,10 @@ crawler_dict = {}
 box_creds = dict()
 
 
+# TODO: change this variable for prod/dev.
+IS_DEV = True
+
+
 from globus_sdk import ConfidentialAppAuthClient
 import time
 import os
@@ -97,7 +101,7 @@ def crawl_repo():
 
     push_crawl_task(json.dumps({'crawl_id': str(crawl_id),
                                 'transfer_token': tokens['Transfer'],
-                                'auth_token': tokens['Authorization']}), str(270))
+                                'auth_token': tokens['Authorization']}), str(270), is_dev=IS_DEV)
 
     init_crawl.append(str(crawl_id))
     return {"crawl_id": str(crawl_id), 'status': f"200 (OK)"}
