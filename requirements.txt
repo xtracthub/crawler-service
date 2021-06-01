@@ -1,5 +1,5 @@
 flask
-psycopg2
+psycopg2-binary
 # flask_wtf
 requests
 boto3
