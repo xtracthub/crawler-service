@@ -3,8 +3,8 @@ from flask import Flask, request
 # from flask_api import status
 
 # Import each of our crawlers.
-from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status
-from utils.sqs_utils import push_crawl_task
+# from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status
+# from utils.sqs_utils import push_crawl_task
 
 # from uuid import uuid4
 # #
