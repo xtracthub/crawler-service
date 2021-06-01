@@ -1,6 +1,6 @@
 
 from flask import Flask, request
-from flask_api import status
+# from flask_api import status
 
 # Import each of our crawlers.
 from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status
@@ -87,7 +87,8 @@ box_creds = dict()
 
 @application.route('/')
 def hello():
-    st = status.HTTP_200_OK
+    # st = status.HTTP_200_OK
+    return "hello,world"
     return f"Welcome to the Xtract crawler! \n Status: {str(st)}", st
 
 #
