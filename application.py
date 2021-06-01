@@ -29,10 +29,14 @@ from globus_sdk import ConfidentialAppAuthClient
 import time
 import os
 
+
 def get_uid_from_token(auth_token):
     # Step 1: Get Auth Client with Secrets.
     client_id = os.getenv("GLOBUS_FUNCX_CLIENT")
     secret = os.getenv("GLOBUS_FUNCX_SECRET")
+
+    print(client_id)
+    print(secret)
 
     # Step 2: Transform token and introspect it.
     t0 = time.time()
@@ -94,8 +98,9 @@ def crawl_repo():
 
     print(tokens)
 
-    # TODO: SOMETHING HERE.
-    print(get_uid_from_token(tokens['Authorization']))
+    user_name = get_uid_from_token(tokens['FuncX'])
+    # TODO: need to do something with username
+    print(f"Authenticated username via funcX-Globus credentials: {user_name}")
 
     push_to_pg(str(crawl_id), endpoints)
 
