@@ -85,11 +85,11 @@ box_creds = dict()
 #     crawler.crawl(tc)
 
 
-@application.route('/')
+@application.route('/', methods=['POST', 'GET'])
 def hello():
     # st = status.HTTP_200_OK
     return "hello,world"
-    return f"Welcome to the Xtract crawler! \n Status: {str(st)}", st
+    # return f"Welcome to the Xtract crawler! \n Status: {str(st)}", st
 
 #
 # @application.route('/crawl', methods=['POST'])
