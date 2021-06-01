@@ -1,7 +1,6 @@
 flask
-flask_api
 # flask_wtf
 requests
 boto3
-# pyDrive
-# xtract_sdk==0.0.5
+pyDrive
+xtract_sdk==0.0.5
