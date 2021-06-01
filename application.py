@@ -3,12 +3,12 @@ from flask import Flask, request
 # from flask_api import status
 
 
-# from uuid import uuid4
+from uuid import uuid4
 #
-# import threading
-# import pickle
-# import json
-# import boto3
+import threading
+import pickle
+import json
+import boto3
 from queue import Queue
 
 init_crawl = []
