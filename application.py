@@ -106,7 +106,8 @@ def crawl_repo():
 
     push_crawl_task(json.dumps({'crawl_id': str(crawl_id),
                                 'transfer_token': tokens['Transfer'],
-                                'auth_token': tokens['Authorization']}), str(270), is_dev=IS_DEV)
+                                'auth_token': tokens['Authorization'],
+                                'funcx_token': tokens['FuncX']}), str(270), is_dev=IS_DEV)
 
     init_crawl.append(str(crawl_id))
     return {"crawl_id": str(crawl_id), 'status': f"200 (OK)"}
@@ -160,7 +161,6 @@ def get_status():
     # else:
     #     return {'crawl_id': str(crawl_id), 'Invalid Submission': True}
 
-#
 ret_vals_dict = {"foobar": Queue()}
 
 

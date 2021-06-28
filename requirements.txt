@@ -3,5 +3,6 @@ psycopg2-binary
 # flask_wtf
 requests
 boto3
+globus_sdk
 pyDrive
 xtract_sdk==0.0.5
