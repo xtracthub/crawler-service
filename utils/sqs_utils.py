@@ -64,5 +64,3 @@ def push_crawl_task(task, unique_id, is_dev=False):
                               Entries=[entry])
 
     print("Successfully sent task to SQS!")
-
-# push_crawl_task(json.dumps({'tomato': 'potato'}), 'hello')

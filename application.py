@@ -95,6 +95,7 @@ def crawl_repo():
 
     endpoints = r['endpoints']
     tokens = r['tokens']  # TODO: no idea why this is arriving as a list.
+    # grouper = r['grouper']
 
     print(tokens)
 

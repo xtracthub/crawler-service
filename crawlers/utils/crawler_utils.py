@@ -29,12 +29,12 @@ def push_to_pg(crawl_id, endpoints):
         # cursor.execute_query
 
         for dir in dir_paths:
-            query = f"INSERT INTO crawl_paths (crawl_id, path, path_type, endpoint_id) VALUES (" \
+            query = f"INSERT INTO crawl_paths (crawl_id, path, path_type, endpoint_id, grouper) VALUES (" \
                 f"'{crawl_id}', " \
                 f"'{dir}', " \
                 f"'{endpoint['repo_type']}', " \
-                f"'{endpoint['eid']}')"
-
+                f"'{endpoint['eid']}'," \
+                f"'{endpoint['grouper']}');"
 
             cursor.execute(query)
 
