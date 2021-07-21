@@ -167,8 +167,6 @@ ret_vals_dict = {"foobar": Queue()}
 
 def fetch_crawl_messages(crawl_id):
 
-    print("IN thread! ")
-
     client = boto3.client('sqs',
                           aws_access_key_id=os.environ["aws_access"],
                           aws_secret_access_key=os.environ["aws_secret"], region_name='us-east-1')
@@ -212,6 +210,10 @@ def fetch_crawl_messages(crawl_id):
             mdata = json.loads(message_body)
 
             files = mdata['files']
+            crawl_timestamp = mdata['metadata']['crawl_timestamp']
+
+            for file in files:
+                file['crawl_timestamp'] = crawl_timestamp
 
             for file_name in files:
                 ret_vals_dict[crawl_id].put(file_name)
