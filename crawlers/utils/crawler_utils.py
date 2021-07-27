@@ -26,14 +26,18 @@ def push_to_pg(crawl_id, endpoints):
         print(f"Endpoint: {endpoint}")
 
         dir_paths = endpoint['dir_paths']
-        # cursor.execute_query
+        if 'fx_eid' in endpoint:
+            fx_eid = endpoint['fx_eid']
+        else:
+            fx_eid = None
 
         for dir in dir_paths:
-            query = f"INSERT INTO crawl_paths (crawl_id, path, path_type, endpoint_id, grouper) VALUES (" \
+            query = f"INSERT INTO crawl_paths (crawl_id, path, path_type, endpoint_id, fx_eid, grouper) VALUES (" \
                 f"'{crawl_id}', " \
                 f"'{dir}', " \
                 f"'{endpoint['repo_type']}', " \
-                f"'{endpoint['eid']}'," \
+                f"'{endpoint['eid']}', " \
+                f"'{fx_eid}', " \
                 f"'{endpoint['grouper']}');"
 
             cursor.execute(query)
@@ -75,6 +79,3 @@ def get_crawl_status(crawl_id):
     crawl_stats['groups_crawled'] = groups_crawled
 
     return crawl_stats
-
-# x = get_crawl_status('74a58778-4b92-4637-93d4-d006685ed549')
-# print(x)

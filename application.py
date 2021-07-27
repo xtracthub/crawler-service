@@ -247,7 +247,7 @@ def fetch_mdata():
             queue_empty = True
             break
         file_path = ret_vals_dict[crawl_id].get()
-        print(file_path)
+        # print(file_path)
         plucked_files += 1
         file_list.append(file_path)
 
