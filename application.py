@@ -217,7 +217,7 @@ def fetch_crawl_messages(crawl_id):
 
         for message in sqs_response["Messages"]:
             message_body = message["Body"]
-            print(message_body)
+            # print(message_body)
 
             del_list.append({'ReceiptHandle': message["ReceiptHandle"],
                              'Id': message["MessageId"]})
@@ -227,12 +227,26 @@ def fetch_crawl_messages(crawl_id):
             files = mdata['files']
             crawl_timestamp = mdata['metadata']['crawl_timestamp']
 
+            filename_size_map = dict()
+            for group in mdata['groups']:
+                for file_obj in group['files']:
+                    path = file_obj['path']
+                    file_size = file_obj['metadata']['physical']['size']
+                    # print(f"Size: {file_size}")
+                    filename_size_map[path] = file_size
+
             for file in files:
+                # print(file)
+
+                # print(f"Size: {file['size']}")
                 file['crawl_timestamp'] = crawl_timestamp
+                # print(f"Size: {filename_size_map[file['path']]}")
+                file['size'] = filename_size_map[file['path']]
 
-            for file_name in files:
-                ret_vals_dict[crawl_id].put(file_name)
+            for file in files:
+                ret_vals_dict[crawl_id].put(file)
 
+            # TODO: BRING BACK DELETION ONCE QAed
             if len(del_list) > 0:
                 client.delete_message_batch(
                     QueueUrl=crawl_queue,
