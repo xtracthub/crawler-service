@@ -1,6 +1,5 @@
 flask
-psycopg2-binary
-# flask_wtf
+psycopg2-binary==2.8.5
 requests
 boto3
 globus_sdk
