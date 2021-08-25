@@ -103,11 +103,12 @@ def crawl_repo():
 
     # TODO: boot a bunch of this into pg_utils
     conn = pg_conn()
-    for skip_item in skip_list:
-        cur = conn.cursor()
-        query = f"""INSERT INTO skip_lookup (crawl_id, skip_pattern) VALUES ('{crawl_id}', '{skip_item}');"""
-        cur.execute(query)
-    conn.commit()
+    if skip_list is not None:
+        for skip_item in skip_list:
+            cur = conn.cursor()
+            query = f"""INSERT INTO skip_lookup (crawl_id, skip_pattern) VALUES ('{crawl_id}', '{skip_item}');"""
+            cur.execute(query)
+        conn.commit()
 
     tokens = r['tokens']  # TODO: no idea why this is arriving as a list.
     # grouper = r['grouper']
