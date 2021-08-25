@@ -23,7 +23,7 @@ def get_crawl_work_queue(client, is_dev=False):
         )
     else:
         response = client.get_queue_url(
-            QueueName='crawl_work_queue_DEBUG',
+            QueueName='crawl_work_queue',
             QueueOwnerAWSAccountId=os.environ["aws_account"]
         )
 
