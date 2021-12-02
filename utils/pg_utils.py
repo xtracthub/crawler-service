@@ -31,3 +31,4 @@ def pg_update(cur, update_string):
     except Exception as e:
         print(e)
         raise ConnectionError("Unable to connect to database.")
+

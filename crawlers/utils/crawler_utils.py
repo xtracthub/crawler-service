@@ -16,9 +16,6 @@ def push_to_pg(crawl_id, endpoints):
     conn = pg_conn()
     cursor = conn.cursor()
 
-    # TODO: we should have two tables here.
-    # init_query = "INSERT INTO crawls (crawl_id, owner)"
-
     print(f"Passed in {len(endpoints)} endpoints!")
 
     # TODO: update to one batch insert
@@ -47,6 +44,16 @@ def push_to_pg(crawl_id, endpoints):
     conn.commit()
     conn.close()
     print(f"Successfully pushed new crawl data to Postgres!")
+
+
+def push_crawl_obj(crawl_id, crawl_obj):
+    conn = pg_conn()
+    cur = conn.cursor()
+
+    query = f"INSERT INTO crawl_queue_objects (crawl_id, crawl_object) VALUES ('{crawl_id}', '{crawl_obj}')"
+    print(query)
+    cur.execute(query)
+    conn.commit()
 
 
 def get_crawl_status(crawl_id):
