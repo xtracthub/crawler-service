@@ -46,9 +46,12 @@ def hb_check_thread():
                     cur = conn.cursor()
                     query = f"""UPDATE TABLE crawls SET status='failure_retrying' where crawl_id='{crawl_id}';"""
                     pg_update(cur, query)
-                    # TODO: need to assemble an object with Tokens
-                    # TODO: get from crawl_q_db!!!!!
-                    push_crawl_task(crawl_id, unique_id=str(270))
+                    crawl_token_q = f"""SELECT crawl_object FROM crawl_queue_objects where crawl_id='{crawl_id}';"""
+                    cur.execute(crawl_token_q)
+                    # TODO: proper try/catch.
+                    crawl_object = cur.fetchone()
+
+                    push_crawl_task(crawl_object, unique_id=str(270))
                     time.sleep(0.25)  # Just to avoid creating too many DB connections in short period.
                 elif status == 'complete':
                     # If we are done processing, then we should
@@ -279,6 +282,8 @@ def heartbeat():
     r = request.json
     crawl_id = r['crawl_id']
     hb_time = time.time()
+
+    print(f"Received heartbeat from crawl_id: {crawl_id}")
 
     if crawl_id not in crawler_heartbeat_dict:
         crawler_heartbeat_dict[crawl_id] = {'action': None, 'time': None}
