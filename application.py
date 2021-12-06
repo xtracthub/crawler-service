@@ -1,5 +1,5 @@
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from crawlers.utils.crawler_utils import push_to_pg, get_crawl_status, push_crawl_obj
 from utils.pg_utils import pg_conn, pg_update
@@ -291,9 +291,9 @@ def heartbeat():
 
     # If we need to stop, that means we decided to just resubmit the task.
     if crawler_heartbeat_dict[crawl_id]['action'] == 'stop':
-        return {"crawl_id": str(crawl_id), "status": "STOP"}
+        return jsonify({"crawl_id": str(crawl_id), "status": "STOP"})
 
-    return {"crawl_id": str(crawl_id), "status": "OK"}
+    return jsonify({"crawl_id": str(crawl_id), "status": "OK"})
 
 
 if __name__ == '__main__':
